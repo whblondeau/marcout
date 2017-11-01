@@ -4,6 +4,7 @@ HOW TO SET UP THE PYTHON # ENVIRONMENT FOR MARCout
   - Debian/Ubuntu: 
     `sudo apt install python-3`
   -Mac OSX:
+    `brew install python3`
   
 2. Set up virtual environment. The general syntax is:
     `python3 -m venv /path/to/new/virtual/environment`
