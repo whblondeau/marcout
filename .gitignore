@@ -104,4 +104,7 @@ ENV/
 /bin
 pyvenv.cfg
 
+# pip
+pip-selfcheck.json
+
 /archive
