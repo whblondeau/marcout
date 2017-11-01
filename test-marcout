@@ -1,0 +1,71 @@
+#!/usr/bin/python3
+
+usage = '''USAGE:
+    test-marcout [<unified-json-filepath>] [--verbose]
+    or
+    python3 test-marcout [<unified-json-filepath>] [--verbose]
+
+PARAMETERS:
+
+    <unified-json-filepath>: The location of a file containing all of the 
+        necessary content for a MARCout export:
+
+        - MARCout source text for export definition
+
+        - collection-specific content
+
+        - requested serialization for exported records
+
+        - records to be exported, in JSON format expected in MARCout export
+            definitions
+
+        if this parameter is omitted, the default is to use ./unified-json.json.
+
+    --verbose: causes print of extra informative/diagnostic content to stdout.
+
+This script is a test/dev utility that invokes marcout.py from the command line.
+'''
+
+
+
+
+import sys
+
+# import for marcout.py -- a file in the same directory as this file.
+# marcout is the module that does the export work. Its
+# entry point is the "export_records" function.
+import marcout
+
+if '--help' in sys.argv:
+    print(usage)
+    exit(0)
+
+
+call_options = [arg for arg in sys.argv[1:] if arg.startswith('-')]
+call_params = [arg for arg in sys.argv[1:] if not arg.startswith('-')]
+
+verbose = '--verbose' in call_options
+
+# default: use local copy
+unified_json_path = 'unified-json.json'
+if call_params:
+    unified_json_path = call_params[0]
+
+if verbose:
+    print('unified JSON path:')
+    print(unified_json_path)
+
+with open(unified_json_path) as json_file:
+    json_text = json_file.read()
+
+    if verbose:
+        print('unified JSON read. Dispatching to marcout.py module')
+
+    marc_export = marcout.export_records(json_text, verbose=verbose)
+
+    if verbose:
+        print('...export completed.')
+        print('====================================================')
+        print()
+
+    print(marc_export)

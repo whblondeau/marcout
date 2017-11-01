@@ -1,0 +1,171 @@
+{    
+    "marcout_text":"\nDESCRIPTION--------------------------------------\n\nMARCout is a high-level language for defining MARC bibliographic record\nexports. It's currently developed for MUSICat album records.\n\nMARCout describes the necessary prerequisites and desired fields in\na simple declarative form. The hope is that MARCout authoring and editing\nshould be within the grasp of bibliographers who are not programmers.\n\nMARCout PROCESS CHAIN\n\n    {MARCout export definition}\n        |\n         -->[MARCout parser]\n                |\n                 -->{export data structure}\n                            |\n                            |\n    {source record (JSON)}   -->[                       |\n        |                       |MARCout record exporter|                       |\n         ---------------------->|                       ]\n                                    |\n                                     -->{exported record}\n                                            |\n                                             --> [MARCout text serializer]\n                                            or\n                                            |\n                                             --> [MARCout ISO 2709 serializer]\n\n\nEXPRESSIONS\nMARCout defines a simple \"expression\" syntax for defining exported data. \nExpressions are composed of:\n\n    - MARCout keywords and operators: a limited set of reserved words, single\n        characters, and phrases that provide simple expression semantics.\n\n    - Literal content: fixed strings. Always enclosed in single quotes.\n\n    - Source record extraction expressions: named JSON node syntax expressions\n        found in the JSON EXTRACTED PROPERTIES block of a MARCout file.\n\n    - Function calls: functions whose signatures are listed in the FUNCTIONS \n        block of a MARCout file.\n\n    - Parameters: parameters whose names are listed in the KNOWN PARAMETERS\n        block of a MARCout file\n\nGEEKLY DISCLAIMER:\nProgrammers will be disappointed with MARCout expression semantics & syntax.\nThey will feel immediately frustrated because their normal modes of\nthought and work are ruthlessly unsupported. So, it's important to emphasize\nthat MARCout EXPRESSIONS WERE NEVER INTENDED TO BE A SCRIPTING LANGUAGE.\nThey are only a simplistic declarative way to state common-case rules and\ndirectives for composing MARC export content.\n\nThe keywords and operators, in particular, very deliberately leave out some\nthings that programmers would expect. For example:\n\n    - Expression keywords and operators do not support IF/ELSE conditionals.\n\n    - No grouping brackets (except for the parentheses in function calls).\n\n    - There is no proper handling of boolean logic: no `AND`, `OR`,\n        or `NOT` operators; the union of `IS FALSE` and `IS TRUE` does not\n        exhaust the value space of expressions (those keywords are limited\n        to values that *explicitly* indicate true or false conditions).\n\n    - No arithmetic.\n\n    - No date comparisons.\n\n    - And so on.\n\nTake heart, though, programmers: the extensibility loophole is that MARCout\npermits you to define your own functions and add them to your MARCout record\nexporter. NB: don't forget to add them to the MARCout export definition \nFUNCTIONS block too.\n\nMARCout EXPRESSION SPECIFIC VALUES:\n\n    - `PRESENT`: (for JSON node expressions and parameters.) A MARCout\n        expression evaluates as `PRESENT` if it does not encounter a\n        \"not found\" or \"undefined\" problem.\n\n        Note that an expression will evaluate as `PRESENT` irrespective of\n        its value. A value of None, JSON null, or an empty string, in\n        particular, does not prevent, or in any way affect, evaluation as\n        `PRESENT`.\n\n    - `FALSE`: a MARCOUT expression evaluates as `FALSE` if it is `PRESENT`\n        and has one of the following values: \n\n            - `false` (if boolean),\n\n            - case-insensitive \"no\" or case-insensitive \"false\" (if string), \n\n            - 0 (if number)\n\n        Note! the values 'F' and 'N' do NOT evaluate as `FALSE`, because \n        they could reasonably signify something else. If you have a \"Y/N\"\n        or \"T/F\" enumeration in a field in your JSON, test for the\n        explicit value.\n\n    - `TRUE`: a MARCout expression evaluates as `TRUE` if it is `PRESENT`\n        and has one of the following values: \n\n            - `true` (if boolean),\n\n            - case-insensitive \"yes\" or case-insensitive \"true\" (if string), \n\n            - 1 (if number)\n\n        Note! the values 'T' and 'Y' do NOT evaluate as `FALSE`, because \n        they could reasonably signify something else. If you have a \"Y/N\"\n        or \"T/F\" enumeration in a field in your JSON, test for the\n        explicit value.\n\n    - `EMPTY`: a MARCout expression evaluates as `EMPTY` if it is `PRESENT`\n        and is one of the following:\n\n            - an empty string\n\n            - a whitespace string\n\n            - a collection of type `list`, `tuple`, `dict`, or `set`, with \n                length of zero.\n\n\nMARCout EXPRESSION KEYWORDS AND OPERATORS:\nThis syntax is intended to be simple to learn and not confusing to sight-read.\nIt facilitates composing extracted content from the record to export with\nliteral values and function calls.\n\n    - `IS`: infix operator that compares two sub-expressions for equality. \n        Equivalent to `==` in Python.\n\n    - `IS NOT`: infix operator that compares two sub-expressions for inequality. \n        Equivalent to `!=` in Python.\n\n    - `IS TRUE`: postfix operator that resolves to True if the preceding\n        expression is a MARCout value for `TRUE`.\n\n    - `IS FALSE`: postfix operator that resolves to True if the preceding\n        expression is a MARCout value for `FALSE`.\n\n    - `HAS VALUE`: postfix operator that resolves to True if the preceding \n        expression is PRESENT and not `EMPTY`. In other words, the expression\n        has meaning over and above the ambiguous empty values.\n\n    - `HAS NO VALUE`: postfix operator that resolves to True if the preceding\n        expression is not `PRESENT`, or, if `PRESENT`, is `EMPTY`.\n\n    - `NOTHING`: alias (non-operator) keyword for generation of an empty value.\n        Depending on context, makes an empty string, or a non-value such as \n        Python `None` or JSON `null`.\n\n    - `STARTS WITH`: operator for string values. Resolves to True if the\n        preceding string starts with the subsequent string.\n\n    - `CONTAINS`: operator for string values. Resolves to True if the\n        preceding string starts with the subsequent string.\n\n    - `+`: the concatenation operator for string values. Does NOT represent\n        numeric addition, date addition, etc.\n\n\n\n\n\nKNOWN PARAMETERS---------------------------------\n\n    collection_namespace\n\n    collection_label\n\n    collection_abbr\n\n    collection_host_url\n\n\n\nJSON EXTRACTED PROPERTIES------------------------\n\n    album_id = album_json['album']['id']\n\n    main_artist_name = album_json['album']['main_artist_name']\n\n    artist_is_group = album_json['album']['artist_is_group']\n\n    album_title = album_json['album']['title']\n\n    release_date = normalize_date(album_json['album']['release_date'])\n\n    record_label = album_json['album']['record_label']\n\n    submission_round = album_json['album']['round']\n\n    album_tracks = album_json['album']['tracks']\n\n    spoken_languages = album_json['album']['spoken_languages']\n\n    genre = album_json['album']['genre']\n\n    front_cover_art_link = album_json['album']['front_cover_art']\n\n\n\nFUNCTIONS----------------------------------------\n\n    biblio_name(main_artist_name)\n\n    normalize_date(release_date)\n\n    release_year(release_date)\n\n    release_decade(release_date)\n\n    render_track_duration(track_duration)\n\n    pretty_comma_list(listexpr)\n\n    total_play_length(album_tracks)\n\n    compute_control_number(album_id, collection_abbr)\n\n\n\nMARC FIELD TEMPLATES------------------------------------\n\nFIELD: 001\n    CONTENT: compute_control_number(album_id, collection_abbr)\n\n\nFIELD: 003\n    CONTENT: collection_label + ' MUSICat'\n\n\n# example of commenting out a block of code\n#FIELD: 003\n#    SUBFIELD: a\n#        collection_label + ' MUSICat'\n\n\nFIELD: 100\n# note that \"EXPORT UNLESS\" is a default: if the property is missing or screwed up,\n# that counts as (\"artist_is_group\": false), so you DO export this field.\nEXPORT UNLESS: artist_is_group IS TRUE     # This is the conjectural \"artist_is_group\" property\nINDC1: 1\nINDC2: blank\n    SUBFIELD: a                         # subfield code on same line\n        # it's OK to have a comment in between -- they get stripped out first\n        biblio_name(main_artist_name)   # subfield value on VERY NEXT non-comment line\n\n\nFIELD: 110\nEXPORT WHEN: artist_is_group IS TRUE\nINDC1: 2\nINDC2: blank\n    SUBFIELD: a\n        main_artist_name + ' (Musical group)'\n\n\nFIELD: 245\nINDC1: 1\nINDC2: 0\n    SUBFIELD: a\n        album_title\n    SUBFIELD: c\n        main_artist_name\n\n\nFIELD: 260\nINDC1: blank\nINDC2: blank\n    SUBFIELD: a\n        '[Place of publication not indicated] :'\n    SUBFIELD: b\n        record_label\n    SUBFIELD: c\n        release_year(release_date)\n\n\nFIELD: 300\nINDC1: blank\nINDC2: blank\n    SUBFIELD: 1\n        'online resource (1 audio file (' + total_play_length(album_tracks) + ')) ;'\n    SUBFIELD: b\n        'digital'\n\n\nFIELD: 500\nINDC1: blank\nINDC2: blank\n    SUBFIELD: a\n        'MUSICat Submission Round: ' + submission_round\n\n\nFIELD: 506\nINDC1: blank\nINDC2: blank\n    SUBFIELD: a\n        'Streaming available to Library patrons.'\n    SUBFIELD: m\n        collection_label + ' content provided by MUSICat'\n\n\nFIELD: 511\nINDC1: blank\nINDC2: blank\n    SUBFIELD: a\n        'Performed by ' + main_artist_name\n\n\nFIELD: 505\nINDC1: 0\nINDC2: 0\n    FOR EACH: track in album_tracks\n        EACH-SUBFIELD: t\n            track::title\n        EACH-SUBFIELD: g\n            render_duration(track::duration)\n        SORT BY: track::position\n        DEMARC WITH: ' --'\n\n\nFIELD: 546\nINDC1: blank\nINDC2: blank\n    SUBFIELD: a\n        'Sung in ' + pretty_comma_list(spoken_languages)\n\n\nFIELD: 650\nINDC1: blank\nINDC2: 0\n    SUBFIELD: a\n        genre\n    SUBFIELD: y\n        release_decade(release_date)\n\n\nFIELD: 710\nINDC1: 2\nINDC2: blank\n    SUBFIELD: a\n        'Rabble, LLC'\n    SUBFIELD: u\n        'MUSICat'\n\n\n# subfield 42\nFIELD: 856\nINDC1: 4\nINDC2: 2\n    SUBFIELD: z\n        'Cover image'\n    SUBFIELD: u\n        front_cover_art_link\n\n\n# subfield 40\nFIELD: 856\nINDC1: 4\nINDC2: 0\n    SUBFIELD: u\n        collection_host_url + '/albums/' + album_id\n    SUBFIELD: z\n        'Click here to access this electronic item'\n\n",
+
+    "collection_info": {
+        "collection_namespace": "org.nashville.library.boombox",
+        "collection_label": "BoomBox",
+        "collection_abbr": "nbb",
+        "collection_host_url": "https://boombox.library.nashville.org"
+    },
+    "requested_serialization": {
+        "serialization-name": "marc-text"
+    },
+    "records": [
+        {
+            "album": {
+                "record_label": "Independent",
+                "spoken_languages": "English",
+                "main_artist_name": "Gabriel Teodros & AirMe",
+                "artist_is_group": true,
+                "badge_tag": null,
+                "title": "Children Of The Dragon",
+                "badge_image": null,
+                "release_date": "2014-05-07T07:00:00.000Z",
+                "front_cover_art": "https://playback-jsfs.spl.org/complete-submission/albums/gabriel-teodros-and-airme-children-of-the-dragon/childrenofthedragon-1.jpg",
+                "upc": null,
+                "auth_required_to_stream": false,
+                "asset_type": "album",
+                "genre": "Rap & Hip Hop",
+                "tracks": [{
+                    "title": "Stay Present",
+                    "url": "https://playback-jsfs.spl.org/complete-submission/gabriel-teodros-and-airme-children-of-the-dragon/12-stay-present--1467324941000.mp3",
+                    "filename": "12 Stay Present.mp3",
+                    "access_token": "75c25e8da29a98d9d2a61d5bcad6bf9689852f6d",
+                    "duration": 164.1547052154195,
+                    "position": 12
+                }, {
+                    "title": "Grow Up Before You Blow Up (ft. Luam Kidane)",
+                    "url": "https://playback-jsfs.spl.org/complete-submission/gabriel-teodros-and-airme-children-of-the-dragon/11-grow-up-before-you-blow-up-ft-luam-kidane--1467324941000.mp3",
+                    "filename": "11 Grow Up Before You Blow Up (ft. Luam Kidane).mp3",
+                    "access_token": "d336ad8eeba947a2904167a905cc506b00462c3b",
+                    "duration": 126.72141723356009,
+                    "position": 11
+                }, {
+                    "title": "Parable Of The Dragon",
+                    "url": "https://playback-jsfs.spl.org/complete-submission/gabriel-teodros-and-airme-children-of-the-dragon/10-parable-of-the-dragon--1467324941000.mp3",
+                    "filename": "10 Parable Of The Dragon.mp3",
+                    "access_token": "c76b6e86d6b2e8fb1f47fd2814a7b91fa0b6fc57",
+                    "duration": 112.79801587301587,
+                    "position": 10
+                }, {
+                    "title": "In A Post-Apocalyptic B-Boy Stance",
+                    "url": "https://playback-jsfs.spl.org/complete-submission/gabriel-teodros-and-airme-children-of-the-dragon/09-in-a-post-apocalyptic-b-boy-stance--1467324941000.mp3",
+                    "filename": "09 In A Post-Apocalyptic B-Boy Stance.mp3",
+                    "access_token": "237ef078e7d142a0046b81022eed6337a66de2a5",
+                    "duration": 181.52625850340135,
+                    "position": 9
+                }, {
+                    "title": "Clarity",
+                    "url": "https://playback-jsfs.spl.org/complete-submission/gabriel-teodros-and-airme-children-of-the-dragon/08-clarity--1467324941000.mp3",
+                    "filename": "08 Clarity.mp3",
+                    "access_token": "bf3324c109e6b227c542e98163a1f8bc80ca7537",
+                    "duration": 171.4167120181406,
+                    "position": 8
+                }, {
+                    "title": "Prayer",
+                    "url": "https://playback-jsfs.spl.org/complete-submission/gabriel-teodros-and-airme-children-of-the-dragon/07-prayer--1467324941000.mp3",
+                    "filename": "07 Prayer.mp3",
+                    "access_token": "ea1845cfc2dbdbbb0e7b933edb7af9bcd5901e3a",
+                    "duration": 97.7514058956916,
+                    "position": 7
+                }, {
+                    "title": "Bole Road",
+                    "url": "https://playback-jsfs.spl.org/complete-submission/gabriel-teodros-and-airme-children-of-the-dragon/06-bole-road--1467324941000.mp3",
+                    "filename": "06 Bole Road.mp3",
+                    "access_token": "2e5142a58f7559a20aff0849139284fe580de2ce",
+                    "duration": 188.39631519274377,
+                    "position": 6
+                }, {
+                    "title": "Frida Kahlo",
+                    "url": "https://playback-jsfs.spl.org/complete-submission/gabriel-teodros-and-airme-children-of-the-dragon/05-frida-kahlo--1467324941000.mp3",
+                    "filename": "05 Frida Kahlo.mp3",
+                    "access_token": "76eaf891f957a77b31060be110527a02ae31f2f5",
+                    "duration": 163.8934693877551,
+                    "position": 5
+                }, {
+                    "title": "The City Of Bruce Lee",
+                    "url": "https://playback-jsfs.spl.org/complete-submission/gabriel-teodros-and-airme-children-of-the-dragon/04-the-city-of-bruce-lee--1467324941000.mp3",
+                    "filename": "04 The City Of Bruce Lee.mp3",
+                    "access_token": "1c5f0680814c76d392872929f9c5404ceba2fe50",
+                    "duration": 153.9931179138322,
+                    "position": 4
+                }, {
+                    "title": "Beyond The Shadow Of A Doubt Monster",
+                    "url": "https://playback-jsfs.spl.org/complete-submission/gabriel-teodros-and-airme-children-of-the-dragon/03-beyond-the-shadow-of-a-doubt-monster--1467324941000.mp3",
+                    "filename": "03 Beyond The Shadow Of A Doubt Monster.mp3",
+                    "access_token": "5030fdc58a9f2e3638994783cb7b0680b420d500",
+                    "duration": 196.12871882086168,
+                    "position": 3
+                }, {
+                    "title": "24 Hour Layover (ft. Mahi Mo)",
+                    "url": "https://playback-jsfs.spl.org/complete-submission/gabriel-teodros-and-airme-children-of-the-dragon/02-24-hour-layover-ft-mahi-mo--1467324941000.mp3",
+                    "filename": "02 24 Hour Layover (ft. Mahi Mo).mp3",
+                    "access_token": "3b7681f814a957ad97b107c64fd582f12074e830",
+                    "duration": 203.52132653061224,
+                    "position": 2
+                }, {
+                    "title": "Re: Invent (ft. Luam Kidane)",
+                    "url": "https://playback-jsfs.spl.org/complete-submission/gabriel-teodros-and-airme-children-of-the-dragon/01-re_-invent-ft-luam-kidane--1467324941000.mp3",
+                    "filename": "01 Re_ Invent (ft. Luam Kidane).mp3",
+                    "access_token": "262a2e92c65793e1c8ba71b86aebc7dfa983775c",
+                    "duration": 151.09357142857144,
+                    "position": 1
+                }],
+                "main_artist": "gabriel-teodros-and-airme",
+                "id": "gabriel-teodros-and-airme-children-of-the-dragon",
+                "round": "playback-spring-2016"
+            },
+            "owner": "ee7391caa51ae97ca139fb8fffe4cb3749606b21"
+        },
+        {
+            "album": {
+                "id": "mischa-lively-album",
+                "asset_type": "album",
+                "title": "Pillow",
+                "round": "boombox-fall-2016",
+                "front_cover_art": "https://boombox-jsfs.library.nashville.org/complete-submission/albums/mischa-lively-album/1500x1500_300ppi_pillow_digi_ep_art_rgb.jpg",
+                "main_artist": "mischa-lively",
+                "main_artist_name": "Mischa Lively",
+                "artist_is_group": false,
+                "release_date": "2016-05-20T00:00:00.000Z",
+                "record_label": "RACECAR",
+                "upc": null,
+                "genre": "Dance & Electronic",
+                "badge_image": null,
+                "badge_tag": null,
+                "spoken_languages": "English",
+                "auth_required_to_stream": false,
+                "tracks": [{
+                    "title": "Held Open",
+                    "filename": "4-Held Open.wav",
+                    "url": "https://boombox-jsfs.library.nashville.org/complete-submission/mischa-lively-album/4-held-open--1474315403000.wav",
+                    "position": 4,
+                    "duration": 400.06068027210887,
+                    "access_token": "cc7163c59ff3ae7501cfc65bb835165c5946c689"
+                }, {
+                    "title": "A Posture For Learning",
+                    "filename": "3-A Posture For Learning.wav",
+                    "url": "https://boombox-jsfs.library.nashville.org/complete-submission/mischa-lively-album/3-a-posture-for-learning--1474315403000.wav",
+                    "position": 3,
+                    "duration": 364.61401360544215,
+                    "access_token": "3e1d204b2707e3f4565b36a1ae12104c0ad3e5f2"
+                }, {
+                    "title": "Blakeup",
+                    "filename": "2-Blakeup.wav",
+                    "url": "https://boombox-jsfs.library.nashville.org/complete-submission/mischa-lively-album/2-blakeup--1474315403000.wav",
+                    "position": 2,
+                    "duration": 308.56820861678005,
+                    "access_token": "4278bff4e224f6cb8ea564a05f73631a483b622e"
+                }, {
+                    "title": "Pillow",
+                    "filename": "1-Pillow.wav",
+                    "url": "https://boombox-jsfs.library.nashville.org/complete-submission/mischa-lively-album/1-pillow--1474315403000.wav",
+                    "position": 1,
+                    "duration": 509.6957823129252,
+                    "access_token": "7e9440a2438e3435a91aafcdce034c2016b018ea"
+                }]
+            },
+            "owner": "be772e054e21d314f1a4ee9040308af6e1cb6609"
+        }
+    ]
+}
