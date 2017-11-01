@@ -35,7 +35,7 @@ def marcout_export():
         # use the marcout module to return the desired serialization
         serialized_records = ''
         try:
-            serialized_records = marcout.export_records(json_param, verbose=verbose)
+            serialized_records = marcout.export_records(json_param, verbose=verbose_in_export)
             # For a string return, HTTP 200 is automatically provided from inner WSGI
             return serialized_records
         except Exception as ex:
