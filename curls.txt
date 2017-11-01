@@ -1,1 +1,1 @@
-curl -X POST -d @marcout-flask/unified-json.json http://localhost:5020/api/marcout/
+curl -X POST -d @unified-json.json http://localhost:5020/api/marcout/
