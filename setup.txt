@@ -1,0 +1,38 @@
+HOW TO SET UP THE PYTHON # ENVIRONMENT FOR MARCout
+
+1. Install Python 3 (this MARCout repo has not been written for Python 2.)
+  - Debian/Ubuntu: 
+    `sudo apt install python-3`
+  -Mac OSX:
+  
+2. Set up virtual environment. The general syntax is:
+    `python3 -m venv /path/to/new/virtual/environment`
+    
+  From the root of your local copy of this repo, that will be
+    `python3 -m venv .`
+    
+  Then verify with `ls`. The new virtual environment content should look something like this:
+    `bin  include  lib  lib64  pyvenv.cfg  share`
+    
+3. Upgrade the `pip` Python package manager, and `setuptools` packaging utility, in your virtual 
+environment. (The versions of these that ship with Python are minimal, and generally behind
+the times.)
+
+  First, activate the virtual environment:
+    `source bin/activate`
+  This will change your command prompt, prepending the directory in which your active virtual 
+  environment config/install resides.
+  
+  (To exit the virtual environment, use `deactivate`.)
+  
+  (Pro tip: the `source bin/activate` command is idempotent. You can re-run it as many times 
+  as you like without additional effect.)
+  
+  Next, perform the upgrade. IF YOUR VIRTUAL ENVIRONMENT IS NOT ACTIVATED, THIS WILL BE A GLOBAL UPGRADE.
+    `pip install -U pip setuptools`
+
+4. Install the Flask webservice. Again, MAKE SURE YOU ARE USING THE VIRTUAL ENVIRONMENT.
+  `pip install Flask`
+  
+-FIN-
+
