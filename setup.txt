@@ -1,12 +1,15 @@
 HOW TO SET UP THE PYTHON # ENVIRONMENT FOR MARCout
 
-1. Install Python 3 (this MARCout repo has not been written for Python 2.)
+1. INSTALL PYTHON 3 (this MARCout repo has not been written for Python 2.)
   - Debian/Ubuntu: 
     `sudo apt install python-3`
   -Mac OSX:
     `brew install python3`
+
+2. `cd` TO THE ROOT OF YOUR LOCAL COPY OF THIS GIT REPO. (you don't *have* to;
+but if you don't, it's up to you to correct for paths.)
   
-2. Set up virtual environment. The general syntax is:
+3. SET UP VIRTUAL ENVIRONMENT. The general syntax is:
     `python3 -m venv /path/to/new/virtual/environment`
     
   From the root of your local copy of this repo, that will be
@@ -14,25 +17,50 @@ HOW TO SET UP THE PYTHON # ENVIRONMENT FOR MARCout
     
   Then verify with `ls`. The new virtual environment content should look something like this:
     `bin  include  lib  lib64  pyvenv.cfg  share`
-    
-3. Upgrade the `pip` Python package manager, and `setuptools` packaging utility, in your virtual 
-environment. (The versions of these that ship with Python are minimal, and generally behind
-the times.)
 
-  First, activate the virtual environment:
+4. ACTIVATE THE VIRTUAL ENVIRONMENT:
     `source bin/activate`
-  This will change your command prompt, prepending the directory in which your active virtual 
-  environment config/install resides.
-  
-  (To exit the virtual environment, use `deactivate`.)
-  
-  (Pro tip: the `source bin/activate` command is idempotent. You can re-run it as many times 
-  as you like without additional effect.)
-  
-  Next, perform the upgrade. IF YOUR VIRTUAL ENVIRONMENT IS NOT ACTIVATED, THIS WILL BE A GLOBAL UPGRADE.
-    `pip install -U pip setuptools`
+  This may (linux) change your command prompt, prepending the directory in
+  which your active virtual environment config/install resides. Or, it
+  may not (some configurations in OSX).
+  Either way, you can verify that it worked by typing
+    `echo $PATH`
+  This displays the path your computer uses to find any given executable.
+  WHEN YOUR VIRTUAL ENVIRONMENT IS ACTIVE, the `bin/` directory that was
+  created by the `python3 -m venv .` command will be the first thing in the 
+  $PATH.
 
-4. Install the Flask webservice. Again, MAKE SURE YOU ARE USING THE VIRTUAL ENVIRONMENT.
+  Note 1: You SWITCH OFF THE VIRTUAL ENVIRONMENT by entering `deactivate` at 
+  the command line.
+
+  Note 2: The virtual environment ONLY WORKS IN THE WINDOW IN WHICH IT WAS 
+  ACTIVATED (or child windows launched from it.) Other command windows
+  may have a different virtual environment active, or none at all.
+
+  Note 3. THE `source bin/activate` COMMAND IS IDEMPOTENT, meaning you can 
+  run it again and again in the same window, and it remains activated, and
+  nothing changes.
+
+  Note 4. If you perform installations/upgrades in a window in which a virtual 
+  environment is active, the install is limited to the virtual environment.
+  If, on the other hand, YOUR VIRTUAL ENVIRONMENT IS NOT ACTIVE, YOU ARE
+  PERFORMING GLOBAL INSTALLS & UPDATES. You... might not want that.
+
+  Note 5. You DO NOT HAVE TO BE IN THE DIRECTORY into which you installed
+  the virtual environment in order for the virtual env to remain active.
+  The only thing that matters is whether the environment has been activated, 
+  and whether it has been deactivated. THE VIRTUAL ENVIRONMENT FOLLOWS
+  THE COMMAND WINDOW, NOT THE CURRENT DIRECTORY.
+    
+5. UPGRADE THE `pip` PYTHON PACKAGE MANAGER (The version of this that ships
+with Python is minimal, and generally behind the times.) `pip` can update
+itself:
+    `pip install -U pip`
+
+6. UPGRADE THE `setuptools` PACKAGING UTILITY (same issue):
+    `pip install -U setuptools`
+
+7. Install the Flask webserver. 
   `pip install Flask`
   
 -FIN-
