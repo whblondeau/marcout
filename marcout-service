@@ -1,0 +1,4 @@
+#!/bin/bash
+## intended to be run from repo root
+source bin/activate
+FLASK_APP=marcout-webservice.py flask run --port=5020

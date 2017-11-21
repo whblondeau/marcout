@@ -1,0 +1,9 @@
+The Web service can be launched manually, but for convenience, there's the
+`marcout-service` bash script.
+
+FROM THE ROOT OF YOUR COPY OF THIS REPO:
+`./marcout-service`
+
+Note that you DO NOT have to be in a command window with the virtual
+environment activated, because `marcout-service` ensures that the environment
+is activated before launching the service.

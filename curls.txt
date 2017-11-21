@@ -1,0 +1,8 @@
+NOTE: All of these `curl` commands are written with the assumption that you
+are entering them from the root of your local copy of this git repo.
+
+You can enter them from anyplace, but you will have to edit the file paths
+accordingly.
+
+
+curl -X POST -d @unified-json.json http://localhost:5020/api/marcout/1.0/

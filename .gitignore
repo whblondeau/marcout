@@ -100,4 +100,11 @@ ENV/
 # mypy
 .mypy_cache/
 
+# virtual environment
+/bin
+pyvenv.cfg
+
+# pip
+pip-selfcheck.json
+
 /archive
