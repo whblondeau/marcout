@@ -40,7 +40,6 @@ if '--help' in sys.argv:
     print(usage)
     exit(0)
 
-
 call_options = [arg for arg in sys.argv[1:] if arg.startswith('-')]
 call_params = [arg for arg in sys.argv[1:] if not arg.startswith('-')]
 

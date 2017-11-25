@@ -10,6 +10,7 @@ import copy
 # change this to True for ridiculous detail output
 debug_output = False
 
+
 # =============================================================================
 #
 # ================== ONE FUNCTION TO RULE THEM ALL ============================
@@ -46,7 +47,7 @@ def export_records(unified_json_parameter, verbose=False):
     collection_info = unified_json_obj['collection_info']
     requested_serialization = unified_json_obj['requested_serialization']
 
-    print(requested_serialization)
+    # print(requested_serialization)
 
     sz_name = requested_serialization['serialization-name']
     if sz_name not in serializations:
@@ -527,11 +528,21 @@ def parse_marcexport_deflines(deflines):
             sortby_expr = value_after_first(line, ':')
             current_field['foreach']['sortby'].append(sortby_expr)
 
+        # TODO This is DEPRECATED.
         elif line.startswith('DEMARC WITH:'):
             demarc_expr = value_after_first(line, ':')
             current_field['foreach']['demarcator'] = demarc_expr
 
-        # we do not want to grab subfields that are within a 
+        elif line.startswith('EACH-PREFIX:'):
+            prefix_expr = value_after_first(line, ':')
+            current_field['foreach']['prefix'] = prefix_expr
+
+        elif line.startswith('EACH-SUFFIX:'):
+            suffix_expr = value_after_first(line, ':')
+            current_field['foreach']['suffix'] = suffix_expr
+
+        # "we do not want to grab subfields that are within a" ... 
+        # ("within a " what? guess I got distracted.) TODO figure this out
         elif line.startswith('SUBFIELD:'):
             if 'subfields' not in current_field:
                 current_field['subfields'] = []
@@ -1065,6 +1076,7 @@ def rewrite_for_context(marcout_expr, context_expr, context_varname):
     Parameters: `marcout_expr` is the MARCout expression.
     `context_expr` is the MARCout identifier for the context.
     `context_varname` is the evaluable variable reference for the context.
+
     EXAMPLE from FOREACH block:
     marcout_expr: 'render_duration(track::duration)'
     context_expr: 'track::'
@@ -1080,12 +1092,13 @@ def rewrite_for_context(marcout_expr, context_expr, context_varname):
     return ''.join(tokens)
 
 
-def render_foreach(foreach_def_block, current_rec_extracts, collection_info):
-    '''This function analyzes, sorts, and computes MARC subfield content that is defined
-    in a MARCout FOREACH block, returning the subfield content properly rendered.
-
+def evaluate_foreach(foreach_def_block, current_rec_extracts, collection_info):
+    '''This function analyzes, sorts, and computes MARC subfield content 
+    that is defined in a MARCout FOREACH block.
+    It returns each subfield's content, properly rendered, in a List,
+    ordered according to the SORTBY property of the foreach block.
     '''
-    retval = ''
+    retval = []
 
     if debug_output:
         print('CURRENT REC EXTRACTS:')
@@ -1095,21 +1108,45 @@ def render_foreach(foreach_def_block, current_rec_extracts, collection_info):
         print(foreach_def_block)
         print()
 
-    # local variables for notational clarity
-    # itemsource = foreach_def_block['itemsource'] 
-    # itemsource = eval(itemsource)
+    # local variables for notational simplicity:
     itemsource_key = foreach_def_block['itemsource']
     itemsource = current_rec_extracts[itemsource_key]
     eachitem_name = foreach_def_block['eachitem']
     eachitem_expr = eachitem_name + '::'
-    demarc = foreach_def_block['demarcator']
-    # if you do not eval() a string expression, it will insert any accumulated enclosing quotes
-    demarc = eval(demarc)
+
+    # DEMARCATORS
+    # if you do not eval() a string literal expression, it will
+    # retain any accumulated enclosing quotes.
+    #demarc = eval(demarc)
+    prefix = None
+    if 'prefix' in foreach_def_block:
+        prefix = foreach_def_block['prefix']
+        if prefix:
+            prefix = eval(prefix)
+    suffix = None
+    if 'suffix' in foreach_def_block:
+        suffix = foreach_def_block['suffix']
+        if suffix:
+            suffix = eval(prefix)
+    # deprecated! Will treat as 'suffix'
+    demarc = None
+    if 'demarcator' in foreach_def_block:
+        demarc = foreach_def_block['demarcator']
+        if demarc:
+            demarc = eval(demarc)
+
+    # NOTES ABOUT SORTING:
+
+    # 1) This sort sorts the GROUPS (e.g. all tracks in an album) and 
+    # does not touch the subfield ordering WITHIN a group. The internal 
+    # subfield ordering is established in the MARCout declaration.
+
+    # 2) The sort key is evaluated by evaluating the group-level SORT BY
+    # in the MARCout declaration.
 
     sortkeys = foreach_def_block['sortby']
     # TODO: deal with sortby for cascade if more than one sort key in this list
     sortkey = sortkeys[0].lstrip(eachitem_expr)
-
     subfield_defs = foreach_def_block['subfields']
 
     # sort the list being iterated
@@ -1118,7 +1155,8 @@ def render_foreach(foreach_def_block, current_rec_extracts, collection_info):
 
     # append rendered and demarcated subfields to retval
     for eachitem in itemsource:
-        rendered_subfields = ''
+
+        rendered_subfields = []
 
         # this respects subfield definition order
         for subfield_def in subfield_defs:
@@ -1126,6 +1164,11 @@ def render_foreach(foreach_def_block, current_rec_extracts, collection_info):
             # a subfield_def is a dict of form 
             # {subfield_code: evaluable expression}
             for subcode in subfield_def.keys():
+                if subcode.startswith('group_'):
+                    # this doesn't get processed here. It's group level.
+                    pass
+
+                # now with genuine subfields...
                 subfield_expr = subfield_def[subcode]
 
                 # print('  ' + subcode + ': ' + subfield_expr)
@@ -1133,12 +1176,18 @@ def render_foreach(foreach_def_block, current_rec_extracts, collection_info):
                 subfield_expr = rewrite_for_context(subfield_expr, eachitem_expr, 'eachitem')
                 # print('  ' + subcode + ': ' + subfield_expr)
                 # print('  ' + subcode + ': ' + eval(subfield_expr))
-                rendered_subfields += '$'
-                rendered_subfields += subcode
-                rendered_subfields += eval(subfield_expr)
+                eval_expr = eval(subfield_expr)
+                rendered_subfields.append({subcode: eval_expr})
 
-        retval += rendered_subfields
-        retval += demarc
+        # demarcators applied at group level in rendered_subfields
+        if prefix:
+            rendered_subfields.insert(0, {'group_prefix': prefix})
+        if suffix:
+            rendered_subfields.append({'group_suffix': suffix})
+        if demarc:
+            rendered_subfields.append({'group_demarc': demarc})
+
+        retval.append(rendered_subfields)
 
     return retval
 
@@ -1248,7 +1297,7 @@ def populate_marc_field(template, current_rec_extracts, collection_info):
             # 'sortby': array of exprs, e.g. ['track::position'], 
             # 'subfields': array of subfield dicts, e.g. [{'t': 'track::title'}, {'g': 'render_duration(track::duration)'}],
             # 'eachitem': name assigned for notation. e.g. 'track', 
-            retval[propname] = render_foreach(retval[propname], current_rec_extracts, collection_info)
+            retval[propname] = evaluate_foreach(retval[propname], current_rec_extracts, collection_info)
 
         elif propname in('export_if', 'export_if_not'):
             # conditional
@@ -1284,8 +1333,28 @@ def serialize_text(marc_record_fields):
             retval += indc_val
         if 'content' in field:
             retval += field['content']
+
+        # foreach will be a list of subfields, in order, with optional preceding
+        # or subsequent delimiters
         elif 'foreach' in field:
-            retval += field['foreach']
+            for group_item in field['foreach']:
+                # group_item is a list of dicts
+                for sub_item in group_item:
+                    # sub_item dict should only ever have one key & 
+                    # one associated value.
+                    key = list(sub_item.keys())[0]
+                    if key.startswith('group_'):
+                        # it's a group marker, not a data field. 
+                        # Just append the value.
+                        retval += sub_item[key]
+                    else:
+                        # it's a subfield
+                        retval += '$'
+                        subfield_code = key
+                        subfield_val = sub_item[subfield_code]
+                        retval += subfield_code
+                        retval += subfield_val
+
         elif 'subfields' in field:
             for subfield in field['subfields']:
                 retval += '$'
