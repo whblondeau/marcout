@@ -1,0 +1,32 @@
+ISO 2709 LDR for MARCout representation of MARC 21
+
+000000000011111111112222    tens digit of position index
+012345678901234567890123    ones digit of position index
+........................    STEP 0: 24 positions (dot placeholders for single space characters)
+00000.......00000.......    STEP 1: add numeric placeholders for runtime length/position computations
+00000.....2200000...4500    STEP 2: add MARC 21 fixed values
+00000....a2200000...4500    STEP 3: add MARCout fixed value (position 09: character set. We use USC / Unicode only: "a")
+
+LDR BIBLIO CODES
+    05 - Record status
+        DEFAULT: n  # new
+        OVERRIDE:
+    06 - Type of record
+        DEFAULT:
+        OVERRIDE:
+    07 - Bibliographic level
+        DEFAULT:
+        OVERRIDE:
+    08 - Type of control
+        DEFAULT:
+        OVERRIDE:
+    17 - Encoding level
+        DEFAULT:
+        OVERRIDE:
+    18 - Descriptive cataloging form
+        DEFAULT:
+        OVERRIDE:
+    19 - Multipart resource record level
+        DEFAULT:
+        OVERRIDE:
+

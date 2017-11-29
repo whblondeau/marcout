@@ -7,6 +7,8 @@ import datetime
 import hashlib
 import copy
 
+import raw_iso2709_converter as iso
+
 # change this to True for ridiculous detail output
 debug_output = False
 
@@ -273,6 +275,18 @@ marcout_rewrites = {
     #     numeric addition, date addition, etc.
 }
 
+# ISO 2709 LDR constant, 24 chars in length
+iso_2709_ldr_template = '00000....a2200000...4500'
+
+# =============================================================================
+#
+# ================== MARC21 ISO 2709 CONSTANTS ================================
+
+iso_field_delimiter = chr(0x1E)
+iso_subfield_delimiter = chr(0x1F) 
+iso_record_terminator = chr(0x1D)
+
+iso_dir_entry_size = 12
 
 
 
@@ -341,6 +355,29 @@ def rewrite_keyword_expr(expr):
                 raise ValueError('Unknown replacement mode "' + replacement_mode + '".')
 
     return retval
+
+
+def render_ldr(ldr_field_def):
+    '''Accepts a field dict of the following general type:
+    {'tag': 'LDR',
+    '17': 'e', 
+    '19': 'g', 
+    'terminator': '.', 
+    '05': 'a', 
+    '06': 'b', 
+    '07': 'c', 
+    '18': 'f'}
+    returns the 24-character representation with zeroes for run time content,
+    spaces for non-valued content.
+    '''
+    retval = iso_2709_ldr_template
+    for key in ldr_field_def.keys():
+        if key.isdigit() and ldr_field_def[key]:
+            # this is something to write
+            pos = int(key)
+            retval = retval[:pos] + ldr_field_def[key] + retval[pos + 1:]
+    
+    return retval.replace('.', ' ')
 
 
 def parse_marcexport_deflines(deflines):
@@ -468,7 +505,33 @@ def parse_marcexport_deflines(deflines):
                 field_data.append(copy.copy(current_field))
                 current_field = None
 
-        if line.startswith('FIELD:'):
+        if line.startswith('LDR:'):
+            # this is the ISO 2709 LDR, but used for all forms
+            current_field = {}
+            fieldtag = 'LDR'
+            current_field['tag'] = fieldtag
+
+        elif line.startswith('LDR POS:'):
+            line = line.split(':')[1].split()
+
+            # safety: make sure there's a home for this without
+            # an intervening blank line that erased current_field
+            if not current_field:
+                current_field = {}
+                fieldtag = 'LDR'
+                current_field['tag'] = fieldtag
+
+            for segment in line:
+                if segment.isdigit():
+                    # this is the position tag. Get any declared override value:
+                    nextline = defblocks['marc_field_templates'][indx + 1].strip()
+                    if nextline.startswith('OVERRIDE:'):
+                        value = nextline.split(':')[1].strip()
+                    if value:
+                        current_field[segment] = value
+                    break
+
+        elif line.startswith('FIELD:'):
             # new field
             current_field = {}
             fieldtag = line.split(':')[1].strip()
@@ -560,6 +623,18 @@ def parse_marcexport_deflines(deflines):
                 terminator_expr = None
             current_field['terminator'] = terminator_expr
 
+    # the LDR field needs to be represented as 24 chars. Might as well 
+    # do it here -- no further changes until len() and offset computations.
+    LDR_template = None
+    for template in field_data:
+        if template['tag'] == 'LDR':
+            LDR_template = template
+            break
+    # do this as 'fixed' so it won't get evaluated...
+    LDR_template['fixed'] = render_ldr(LDR_template)
+    LDR_template['terminator'] = None
+
+    # assign all of this to the MARC FIELD TEMPLATES block
     marcdefs['marc_field_templates'] = field_data
 
     return marcdefs
@@ -1095,7 +1170,8 @@ def rewrite_for_context(marcout_expr, context_expr, context_varname):
 def evaluate_foreach(foreach_def_block, current_rec_extracts, collection_info):
     '''This function analyzes, sorts, and computes MARC subfield content 
     that is defined in a MARCout FOREACH block.
-    It returns each subfield's content, properly rendered, in a List,
+    It returns each subfield's content, properly rendered, with declared 
+    demarcators(prefix, suffix) in a List,
     ordered according to the SORTBY property of the foreach block.
     '''
     retval = []
@@ -1127,7 +1203,7 @@ def evaluate_foreach(foreach_def_block, current_rec_extracts, collection_info):
     if 'suffix' in foreach_def_block:
         suffix = foreach_def_block['suffix']
         if suffix:
-            suffix = eval(prefix)
+            suffix = eval(suffix)
     # deprecated! Will treat as 'suffix'
     demarc = None
     if 'demarcator' in foreach_def_block:
@@ -1273,7 +1349,7 @@ def populate_marc_field(template, current_rec_extracts, collection_info):
 
     for propname in retval:
 
-        if propname in ('tag', 'indicator_1', 'indicator_2'):
+        if propname in ('tag', 'indicator_1', 'indicator_2', 'fixed'):
 
             # do not evaluate. These are fixed, not computed.
             continue
@@ -1315,6 +1391,12 @@ def populate_marc_field(template, current_rec_extracts, collection_info):
 
 def serialize_text(marc_record_fields):
 
+    print()
+    print('==================================================')
+    print(marc_record_fields)
+    print('==================================================')
+    print()
+
     retval = ''
 
     for field in marc_record_fields:
@@ -1331,6 +1413,10 @@ def serialize_text(marc_record_fields):
                     # We need to escape the backslash character by doubling it.
                     indc_val = '\\'
             retval += indc_val
+
+        if 'fixed' in field:
+            retval += field['fixed']
+
         if 'content' in field:
             retval += field['content']
 
@@ -1375,7 +1461,6 @@ def serialize_iso2709(marc_record_fields):
 
     retval = ''
 
-    raise Exception('The `serialize_iso2709` function is not implemented yet.')
 
     return retval
 

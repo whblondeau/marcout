@@ -178,7 +178,44 @@ def raw_field_2_iso(raw_field):
             # this is another level of complexity: a pattern of subfields,
             # repeated in "groups" corresponding to each item in the foreach.
             # There are also group-level items such as demarcators.
+            # foreach is a list of lists:
+            # 
+            # 'foreach': [
+            #         [{
+            #             't': 'Pillow'
+            #         }, {
+            #             'g': '(8:30)'
+            #         }, {
+            #             'group_suffix': ' --'
+            #         }],
+            #         etc.
 
+            # The outer list preserves sort order imposed on the groups.
+            # The inner list preserves the pattern (including all demarcators).
+            # Each dict contains a single entry.
+            #   - Normal subfields get rendered as subfields.
+            #   - Demarcators exist at the group level, and are to be rendered as 
+            #       string literal values (not subfields) when encountered. NO
+            #       SUPPLEMENTAL SORTING is required - demarcators were sorted 
+            #       when data was injected into the Raw form.
+
+            for group_listing in raw_field['foreach']:
+
+                for item in group_listing:
+                    # item is a dict. Should only ever have one key & 
+                    # one associated value.
+                    key = list(item.keys())[0]
+                    if key.startswith('group_'):
+                        # demarcator
+                        retval += item[key]
+
+                    else:
+                        # it's a subfield
+                        retval += subfield_delimiter
+                        subfield_code = key
+                        subfield_val = item[subfield_code]
+                        retval += subfield_code
+                        retval += subfield_val
 
 
     return tag, retval
@@ -190,6 +227,9 @@ def make_iso_directory(field_defs):
     '''
     retval = ''
     cur_startpos = 0
+
+    print()
+    print('MAKING ISO DIRECTORY----------------------------------')
     for field in field_defs:
         print()
         print('field: ' + str(field))
@@ -208,12 +248,21 @@ def make_iso_directory(field_defs):
         # move the counter
         cur_startpos = cur_startpos + field_len
 
+    print('DONE MAKING DIRECTORY---------------------------------')
+    print()
     return retval
 
 
 def raw_record_2_iso(raw_record):
     # raw_record is a list of field dicts, OPTIONALLY beginning with the
     # 24-charcter LDR code.
+
+    print()
+    print()
+    print('RAW RECORD:')
+    print(raw_record)
+    print()
+    print()
 
     LDR = None
 
@@ -226,32 +275,39 @@ def raw_record_2_iso(raw_record):
             # it's a normal field. Add (tag, content) to field list
             fields.append(raw_field_2_iso(raw_field))
 
+    if not LDR:
+        LDR =  ''.join(['0','0','0','0','0',' ',' ',' ',' ','a','2','2',
+        ' ',' ',' ',' ',' ',' ',' ','#','4','5','0','0'])
+
     directory = make_iso_directory(fields)
 
     field_text = ''.join([field_def[1] for field_def in fields])
 
     # put it all together
-    iso_record = LDR + directory + field_text + field_delimiter + record_terminator
+    iso_record = directory
+    iso_record += field_text 
+    iso_record += field_delimiter
+    iso_record += record_terminator
 
+    # Prepend the LDR
+    # TODO FIX THIS to accept biblio data per customer preference
+    record_length = 24 + len(iso_record)
+    # len as zeropadded string
+    record_length = ('00000' + str(record_length))[-5:]
+    LDR = record_length + LDR[5:]
 
+    # start position of record data is written to LDR positions 12:16.
+    # it's computed by len(LDR) + len(directory)
+    fields_startpos = 24 + len(directory)
+    # len as zeropadded string
+    fields_startpos = ('00000' + str(fields_startpos))[-5:]
+    (print('FIELDS STARTPOS: ' + fields_startpos))
+    LDR = LDR[:12] + fields_startpos + LDR[17:]
 
-# EXECUTE
-import sys
+    print('LDR:')
+    print(LDR)
 
-marcfilename = sys.argv[1]
-marcfile = open(marcfilename)
-marcstuff = marcfile.read()
-marcfile.close()
+    iso_record = LDR + iso_record
 
-conversion = iso_record_2_raw(marcstuff)
+    return iso_record
 
-print(conversion)
-
-print()
-print('=====================================')
-print()
-
-roundtripped_record = raw_record_2_iso(conversion)
-
-print('Is roundtripped_record == original .mrc file content? ')
-print(roundtripped_record == marcstuff)

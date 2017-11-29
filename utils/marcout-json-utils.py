@@ -7,13 +7,12 @@
 
 
 def evaluate_arg(argument):
-    '''Returns content of argument as a -tuple: 
-    (filepath, content, atatus_notes, errors). If the argument is a 
+    '''Returns content of argument as a 4-tuple: 
+    (filepath, content, status_notes, errors). If the argument is a 
     valid filepath expression, `filepath` will be the path.
     If the filepath exists and is readable, `content` will
     be the content of the file; otherwise `content` will
-    echo the argument. Exceptions are returned as Exception
-    objects in the `complaints` list.
+    echo the argument. Errors are returned as strings.
     '''
     abbrev = argument[:20] + '...'
 
@@ -64,25 +63,18 @@ def identify_content(content):
         if '"marcout_text":' in content:
             retval = 'JSON'
     else:
-        print(content[:10])
         marcout_consistent = True
         marcout_markers = ('KNOWN PARAMETERS----',
             'JSON EXTRACTED PROPERTIES----',
             'FUNCTIONS----',
             'MARC FIELD TEMPLATES----',)
         for marker in marcout_markers:
-            print(marker + ' :: gouing in:')
-            print(marcout_consistent)
             if not marker in content:
                 marcout_consistent = False
-                print('DIED ON ' + marker)
                 break
-
         if marcout_consistent:
-            print('MARCOUT OK')
             retval = 'MARCout'
-        else:
-            print('BIG NOPE')
+
     return retval
 
 
@@ -179,7 +171,9 @@ verbose = '--verbose' in call_options
 unified_json = None
 marcout = None
 
-for arg in call_params:
+for indix, arg in enumerate(call_params):
+    print()
+    print('ARG ' + str(indix))
     (filepath, content, status_notes, errors) = evaluate_arg(arg)
     if verbose:
         print()
@@ -220,22 +214,27 @@ for arg in call_params:
                 print(e)
                 exit(1)
 
-            # print(unified_json)
-
         elif identified =='MARCout':
             marcout = content
 
-exit(0)
+    print('after processing arg: marcout.')
+    if marcout:
+        print('  length is ' + str())
+    else:
+        print('None')
 
 if verbose:
     if unified_json:
         print('unified_json parsed.')
-        print(unified_json)
+        # print(unified_json)
     if marcout:
         print('MARCout present.')
-        print(marcout)
+        print(str(len(marcout)) + ' lines.')
+        # print(marcout)
 
 # what action is being asked??
+print(marcout)
+exit(0)
 
 if call_options[0] == '--extract-marcout':
     if unified_json:
@@ -266,18 +265,28 @@ elif call_options[0] == '--update-json':
     if extracted == marcout:
         print('THEY ARE THE SAME.')
 
+    extract_stash = open('extracted_marcout.marcout', 'w')
+    extract_stash.write(extracted)
+    extract_stash.close()
+
+    with open('marcout_stash.marcout', 'w') as marcout_stash:
+        marcout_stash.write(marcout)
+
+
+
     # MARCout is line-oriented
     extracted_lines = extracted.split('\n')
     marcout_lines = marcout.split('\n')
 
     counter = 0
-    for mindx, line in marcout_lines:
+    for mindx, line in enumerate(marcout_lines):
         if line != extracted_lines[mindx]:
             if counter > 50:
                 print('THAT IS ENOUGH.')
                 break
             counter += 1
             print()
+            print('Discrepancy: ' + str(counter))
             print(('    ' + str(mindx))[-4:])
             print('NEW: ' + line)
             print('OLD: ' + extracted_lines[mindx])
