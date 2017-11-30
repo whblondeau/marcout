@@ -1,0 +1,65 @@
+#!/usr/bin/python3
+
+usage = '''Command-line utility that accepts MARCout Export Definition
+source and returns a serialized MARCout Export Engine.
+
+USAGE:
+
+    parse-marcout [--help] | <marcout-source> [--verbose]
+
+    OR
+
+    python3 parse-marcout [--help] | <marcout-source> [--verbose]
+
+PARAMETERS:
+
+    <marcout-source> : either MARCout export definition source text as a 
+    string, or the path to a MARCout export definition source file.
+
+    --verbose : provides human-readable (but machine-unfriendly)
+        information about the parse.
+
+    --help: prints this message and exits
+
+'''
+
+import marcout_parser as parser
+import marcout_common as common
+
+import sys
+import os.path
+
+if '--help' in sys.argv:
+    print(usage)
+    exit(0)
+
+call_options = [arg for arg in sys.argv[1:] if arg.startswith('-')]
+call_params = [arg for arg in sys.argv[1:] if not arg.startswith('-')]
+
+verbose = '--verbose' in call_options
+
+# get MARCout source
+marcout_source = call_params[0]
+
+content, filepath, patherrors = common.get_param_content(marcout_source)
+
+if verbose:
+    if filepath:
+        if patherrors:
+            print('Unable to read from filepath "' + common.truncate_msg(filepath, 40) + '"')
+
+    if content:
+        print('MARCout source text:')
+        print(common.truncate_msg(content, 120))
+
+marcout_source = content
+marcout_lines = content.split('\n')
+
+marcout_engine = parser.parse_marcexport_deflines(marcout_lines)
+
+if verbose:
+    print(common.prettyprint_marcout_engine(marcout_engine))
+else:
+    print(marcout_engine)
+
+
