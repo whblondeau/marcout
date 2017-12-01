@@ -40,7 +40,6 @@ if '--help' in sys.argv:
     print(usage)
     exit(0)
 
-
 call_options = [arg for arg in sys.argv[1:] if arg.startswith('-')]
 call_params = [arg for arg in sys.argv[1:] if not arg.startswith('-')]
 
@@ -60,6 +59,12 @@ with open(unified_json_path) as json_file:
 
     if verbose:
         print('unified JSON read. Dispatching to marcout.py module')
+
+        print()
+        print('========================================================')
+        print(json_text)
+        print('========================================================')
+        print()
 
     marc_export = marcout.export_records(json_text, verbose=verbose)
 

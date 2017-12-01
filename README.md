@@ -7,7 +7,7 @@ This repo includes the following key items:
 
 -**`test-marcout`:** A commandline script that wraps `marcout.py` and exposes.
 
--**`marcout-webservice.py`:** A minimal Flask webservice that exposes the `marcout.py` export and serialization functionality. (NOT a production-quality server setup. Suitable only as a localhost utility server, or a working example of an HTTP service wrapping the `marcout.py` module.)
+-**`marcout-webservice.py`:** A minimal Flask webservice that exposes the `marcout.py` export and serialization functionality. (NOT a production-quality server setup: among other things, the Flask server is unsecured. Suitable only as a localhost utility server, or a working example of an HTTP service wrapping the `marcout.py` module.)
 
 This repo also includes:
 

@@ -108,3 +108,5 @@ pyvenv.cfg
 pip-selfcheck.json
 
 /archive
+/admin
+/hacks
