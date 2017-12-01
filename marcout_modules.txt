@@ -1,0 +1,17 @@
+THE MARCout MODULES
+
+The MARCout basic modules are:
+
+    marcout_parser.py: A translator that turns MARCout source code into a MARCout Engine.
+
+    marcout_export.py: A utility that uses:
+
+        - a MARCout Engine
+
+        - Collection Info
+
+        - a Record in the expected JSON form
+
+    to create a MARCout Record Datastructure.
+
+    marcout_serializer.py: A module that accepts a MARCout Record Data
