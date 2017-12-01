@@ -19,30 +19,45 @@ import marcout_serializer as serializer
 # ================== FUNCTIONS ================================================
 
 
-def parse_unified_json(param):
+def parse_unified_json(param, verbose=False):
 
     # the Flask catcher gets the JSON object as an ImmutableMultiDict
     # which looks VERY messed up when serialized... can we just treat it
 
     # assume it's already a parsed JSON object
-    retval = param
+    jsonobj = param
+    errors = []
 
     if isinstance(param, (str, bytes,)):
         # param might be a filepath, or raw content
         jsontext, filepath, errors = common.get_param_content(param)
 
-    if jsontext:
-        if verbose:
-            print('JSON content:')
-            print(common.truncate_msg(jsontext, 120))
-    else:
-        print('NONE FOUND.')
+        if jsontext:
 
+            # parse content
+            if verbose:
+                print('JSON content:')
+                print(common.truncate_msg(jsontext, 120))
 
+            try:
+                unified_json_obj = json.loads(unified_json_parameter)
+                if verbose:
+                    print('...successfully parsed JSON content.')
+            except Exception as e:
+                # parse died --> no good
+                errors.append(e)
+                jsonobj = None
 
-        unified_json_obj = json.loads(unified_json_parameter)
+            if verbose:
+                print('JSON parse failed.')
+        else:
 
+            # we struck out
+            if verbose:
+                print('No JSON Content found.')
+            jsonobj = None
 
+    return jsonobj, errors
 
 
 def resolve_unified_json(unified_jsonobj):
@@ -126,6 +141,7 @@ def resolve_unified_json(unified_jsonobj):
 
     # We're still here, so the JSON was broadly OK: Not validated,
     # but at least claims to have the right content.
+    # This is the Export Workset datastructure.
     retval = {'marcout_engine': marcout_engine,
         'serialization': sz_name,
         'collection_info': collection_info,
@@ -133,3 +149,23 @@ def resolve_unified_json(unified_jsonobj):
     }
 
     return retval
+
+
+def export_records(unified_jsonobj, verbose=False):
+
+    unified_jsonobj = parse_unified_json(unified_jsonobj)
+
+    # turn the JSON into the Export Workset, with parsed MARCout Engine,
+    # records in the anticipated JSON form, and export directives &
+    # collection-specific metadata.
+    export_workset = resolve_unified_json(unified_jsonobj)
+
+    # The Export Workset, without external data dependencies, contains sufficient
+    # information to generate a list of exported record datastructures.
+    exports = exporterexport_records_per_marcdef(export_workset)
+
+    # exports = serializer.serialize(exports, sz_name)
+
+    return exports
+
+

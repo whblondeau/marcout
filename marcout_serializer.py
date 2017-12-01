@@ -2,20 +2,6 @@
 
 
 
-# =============================================================================
-#
-# ================== CONSTANTS ================================================
-
-
-
-# serialization functions to be called, keyed by serialization_name
-serializations = {
-    'marc-text': serialize_text,
-    'iso2709' : serialize_iso2709,
-    'raw-datastructure': serialize_raw,
-    'marc-xml': serialize_xml,
-}
-
 
 
 # =============================================================================
@@ -109,3 +95,19 @@ def serialize_xml(marc_record_fields):
     '''Returns MARCXML representation
     '''
     raise Exception('serialize_xml not yet implemented.')
+
+
+# =============================================================================
+#
+# ================== CONSTANTS ================================================
+
+
+
+# serialization functions to be called, keyed by serialization_name
+serializations = {
+    'marc-text': serialize_text,
+    'iso2709' : serialize_iso2709,
+    'raw-datastructure': serialize_raw,
+    'marc-xml': serialize_xml,
+}
+

@@ -538,7 +538,7 @@ def compute_expr(expr, current_rec_extracts, collection_info):
     return retval
 
 
-def populate_marc_field(template, current_rec_extracts, collection_info):
+def export_marc_field(template, current_rec_extracts, collection_info):
     '''This function returns a copy of the template, with record-specific
     values computed in place of the various expressions.
     '''
@@ -580,3 +580,107 @@ def populate_marc_field(template, current_rec_extracts, collection_info):
 
     return retval
 
+
+def export_records_per_marcdef(export_workset):
+    '''The parameter is an Export Workset. This is a dict containing all
+    necessary information to export the records it contains:
+    {
+        'marcout_engine': marcout_engine parsed from MARCout export definition document
+        'serialization': sz_name : valid serialization name from unified JSON 
+        'collection_info': collection info from unified JSON 
+        'records_to_export': expected JSON representation of records
+    }
+    '''
+
+    exported_marc_records = []
+
+    # convenience variable
+    engine_json_extractors = export_workset['marcout_engine']['json_extracted_properties']
+    engine_field_templates = export_workset['marcout_engine']['marc_field_templates']
+
+    for record in export_workset['records_to_export']:
+
+        # expected name, per MARCout convention
+        album_json = record
+
+        # Extract content of JSON record into locally scoped variables.
+        # This reconstructs the assignment form in the original 
+        # MARCout syntax.
+        # These variables will then be referenceable in the
+        # MARC field template expressions.
+
+        current_rec_extracts = {}
+
+        # Execute these extraction statements in context of the record
+        for key in engine_json_extractors:
+            # coerce to strings
+            varname = str(key)
+            varval = str(engine_json_extractors[key])
+            expr = varname + ' = ' + varval
+            try:
+                exec(expr)
+            except Exception as ex:
+                msg = 'Failure to execute "' + expr + '":'
+                msg += str(ex)
+                retval += msg + '\n'
+
+            expr = 'current_rec_extracts[\'' + varname + '\'] = ' + varval
+            try:
+                exec(expr)
+            except Exception as ex:
+                msg = 'Failure to execute "' + expr + '":'
+                msg += str(ex)
+                retval += msg + '\n'
+
+        if verbose:
+            retval += '\n'
+            retval += 'THESE ARE THE EXTRACTED VARIABLES:\n'
+            for key in sorted(engine_json_extractors.keys()):
+                # coerce to strings
+                varname = str(key)
+            retval += '\n'
+
+        # TODO ensure named functions are in scope.
+
+        # Populate MARC field data structures by copying templates and
+        # evaluating from the JSON content
+        # and the application of the MARCout functions.
+
+        record_output = []
+        # need to use copy.deepcopy to avoid modifying templates: otherwise 
+        # content would be propagated forward into a subsequent record, which
+        # would blow things up: eval() on *values*, rather than parsed MARCout
+        # expressions, would generally not work. (And in cases where it DID 
+        # work, that would be even worse, creating corrupt records.)
+        for template in copy.deepcopy(engine_field_templates):
+
+            # observe export conditionals
+            if 'export_if' in template:
+                evaluated_conditional = compute_expr(template['export_if'], current_rec_extracts, collection_info)
+                if not evaluated_conditional:
+                    # fail: this template does not get filled and
+                    # placed in the return
+                    continue
+
+            if 'export_if_not' in template:
+                evaluated_conditional = compute_expr(template['export_if_not'], current_rec_extracts, collection_info)
+                # print('evaluates to: ' + str(evaluated_conditional))
+                if evaluated_conditional:
+                    # fail: the True condition prevents this template from 
+                    # being filled and placed in the return
+                    continue
+
+            record_output.append(populate_marc_field(template, current_rec_extracts, collection_info))
+
+        exported_marc_records.append(record_output)
+
+        if verbose:   
+            retval += '\n'
+            retval += '-------------------------------\n'
+            for item in exported_marc_records:
+                retval += '\n'
+                retval += str(item) + '\n'
+
+
+
+print('hey')

@@ -1,170 +1,167 @@
-{ 
-    "marcout_text": "\nDESCRIPTION--------------------------------------\n\nMARCout is a high-level language for defining MARC bibliographic record\nexports. It's currently developed for MUSICat album records.\n\nMARCout describes the necessary prerequisites and desired fields in\na simple declarative form. The hope is that MARCout authoring and editing\nshould be within the grasp of bibliographers who are not programmers.\n\nMARCout PROCESS CHAIN\n\n    {MARCout export definition}\n        |\n         -->[MARCout parser]\n                |\n                 -->{export data structure}\n                            |\n                            |\n    {source record (JSON)}   -->[                       |\n        |                       |MARCout record exporter|                       |\n         ---------------------->|                       ]\n                                    |\n                                     -->{exported record}\n                                            |\n                                             --> [MARCout text serializer]\n                                            or\n                                            |\n                                             --> [MARCout ISO 2709 serializer]\n\n\n\n\n\nKNOWN PARAMETERS---------------------------------\n\n    collection_namespace\n\n    collection_label\n\n    collection_abbr\n\n    collection_host_url\n\n\n\nJSON EXTRACTED PROPERTIES------------------------\n\n    album_id = album_json['album']['id']\n\n    main_artist_name = album_json['album']['main_artist_name']\n\n    artist_is_group = album_json['album']['artist_is_group']\n\n    album_title = album_json['album']['title']\n\n    release_date = normalize_date(album_json['album']['release_date'])\n\n    record_label = album_json['album']['record_label']\n\n    submission_round = album_json['album']['round']\n\n    album_tracks = album_json['album']['tracks']\n\n    spoken_languages = album_json['album']['spoken_languages']\n\n    genre = album_json['album']['genre']\n\n    front_cover_art_link = album_json['album']['front_cover_art']\n\n\n\nFUNCTIONS----------------------------------------\n\n    biblio_name(main_artist_name)\n\n    normalize_date(release_date)\n\n    release_year(release_date)\n\n    release_decade(release_date)\n\n    render_track_duration(track_duration)\n\n    pretty_comma_list(listexpr)\n\n    total_play_length(album_tracks)\n\n    compute_control_number(album_id, collection_abbr)\n\n\n\nMARC FIELD TEMPLATES------------------------------------\n\nLDR:\n    # The ISO 2709 serialization of a MARC 21 record will look like this:\n    # 000000000011111111112222    tens digit of position index\n    # 012345678901234567890123    ones digit of position index\n    # ........................    24 positions (dots are placeholders for spaces)\n    # 00000.......00000.......    Numeric placeholders: runtime length/position\n    # 00000.....2200000...4500    MARC 21 fixed values\n    # 00000....a2200000...4500    MARCout fixed value for Unicode character set. \n    #\n    # This leaves the following code open for assignment. Any code\n    # position that:\n    #\n    #   1. has no default (default is determined by prior consensus, and \n    #       is provided informationally here; editing it in this MARCout \n    #       export definition has no effect), and \n    #\n    #   2. is not overridden by editing the OVERRIDE field in this\n    #       export definition:\n    #\n    # will be replaced by a single space in the exported LDR.\n    # \n    # Note that the LDR, which is an ISO 2709- specific artifact, will be\n    # provided in all serializations. Ignoring the LDR is the responsibility\n    # of the party consuming the export.\n    BIBLIO CODES\n        LDR POS: 05 - Record status # (default \"n\" for new record)\n            OVERRIDE: a\n        LDR POS: 06 - Type of record\n            OVERRIDE: b\n        LDR POS: 07 - Bibliographic level\n            OVERRIDE: c\n        LDR POS: 08 - Type of control\n            OVERRIDE: \n        LDR POS: 17 - Encoding level\n            OVERRIDE: e\n        LDR POS: 18 - Descriptive cataloging form\n            OVERRIDE: f\n        LDR POS: 19 - Multipart resource record level\n            OVERRIDE: g\n\n\nFIELD: 001\n    CONTENT: compute_control_number(album_id, collection_abbr)\n\n\nFIELD: 003\n    CONTENT: collection_label + ' MUSICat'\n\n\n# example of commenting out a block of code\n#FIELD: 003\n#    SUBFIELD: a\n#        collection_label + ' MUSICat'\n\n\nFIELD: 100\n# note that \"EXPORT UNLESS\" is a default: if the property is missing or screwed up,\n# that counts as (\"artist_is_group\": false), so you DO export this field.\nEXPORT UNLESS: artist_is_group IS TRUE     # This is the conjectural \"artist_is_group\" property\nINDC1: 1\nINDC2: blank\n    SUBFIELD: a                         # subfield code on same line\n        # it's OK to have a comment in between -- they get stripped out first\n        biblio_name(main_artist_name)   # subfield value on VERY NEXT non-comment line\n\n\nFIELD: 110\nEXPORT WHEN: artist_is_group IS TRUE\nINDC1: 2\nINDC2: blank\n    SUBFIELD: a\n        main_artist_name + ' (Musical group)'\n\n\nFIELD: 245\nINDC1: 1\nINDC2: 0\n    SUBFIELD: a\n        album_title\n    SUBFIELD: c\n        main_artist_name\n\n\nFIELD: 260\nINDC1: blank\nINDC2: blank\n    SUBFIELD: a\n        '[Place of publication not indicated] :'\n    SUBFIELD: b\n        record_label\n    SUBFIELD: c\n        release_year(release_date)\n\n\nFIELD: 300\nINDC1: blank\nINDC2: blank\n    SUBFIELD: 1\n        'online resource (1 audio file (' + total_play_length(album_tracks) + ')) ;'\n    SUBFIELD: b\n        'digital'\n\n\nFIELD: 500\nINDC1: blank\nINDC2: blank\n    SUBFIELD: a\n        'MUSICat Submission Round: ' + submission_round\n\n\nFIELD: 506\nINDC1: blank\nINDC2: blank\n    SUBFIELD: a\n        'Streaming available to Library patrons.'\n    SUBFIELD: m\n        collection_label + ' content provided by MUSICat'\n\n\nFIELD: 511\nINDC1: blank\nINDC2: blank\n    SUBFIELD: a\n        'Performed by ' + main_artist_name\n\n\nFIELD: 505\nINDC1: 0\nINDC2: 0\n    FOR EACH: track in album_tracks\n        EACH-SUBFIELD: t\n            track::title\n        EACH-SUBFIELD: g\n            render_duration(track::duration)\n        SORT BY: track::position\n        # EACH-PREFIX:\n        EACH-SUFFIX: ' --'\n\n\nFIELD: 546\nINDC1: blank\nINDC2: blank\n    SUBFIELD: a\n        'Sung in ' + pretty_comma_list(spoken_languages)\n\n\nFIELD: 650\nINDC1: blank\nINDC2: 0\n    SUBFIELD: a\n        genre\n    SUBFIELD: y\n        release_decade(release_date)\n\n\nFIELD: 710\nINDC1: 2\nINDC2: blank\n    SUBFIELD: a\n        'Rabble, LLC'\n    SUBFIELD: u\n        'MUSICat'\n\n\n# subfield 42\nFIELD: 856\nINDC1: 4\nINDC2: 2\n    SUBFIELD: z\n        'Cover image'\n    SUBFIELD: u\n        front_cover_art_link\n\n\n# subfield 40\nFIELD: 856\nINDC1: 4\nINDC2: 0\n    SUBFIELD: u\n        collection_host_url + '/albums/' + album_id\n    SUBFIELD: z\n        'Click here to access this electronic item'\n\n",
-    
+{
     "requested_serialization": {
         "serialization-name": "marc-text"
     },
-    
     "collection_info": {
-        "collection_label": "BoomBox",
         "collection_abbr": "nbb",
         "collection_host_url": "https://boombox.library.nashville.org",
-        "collection_namespace": "org.nashville.library.boombox"
+        "collection_namespace": "org.nashville.library.boombox",
+        "collection_label": "BoomBox"
     },
-
+    "marcout_text": "\nDESCRIPTION--------------------------------------\n\nMARCout is a high-level language for defining MARC bibliographic record\nexports. It's currently developed for MUSICat album records.\n\nMARCout describes the necessary prerequisites and desired fields in\na simple declarative form. The hope is that MARCout authoring and editing\nshould be within the grasp of bibliographers who are not programmers.\n\nMARCout PROCESS CHAIN\n\n    {MARCout export definition}\n        |\n         -->[MARCout parser]\n                |\n                 -->{export data structure}\n                            |\n                            |\n    {source record (JSON)}   -->[                       |\n        |                       |MARCout record exporter|                       |\n         ---------------------->|                       ]\n                                    |\n                                     -->{exported record}\n                                            |\n                                             --> [MARCout text serializer]\n                                            or\n                                            |\n                                             --> [MARCout ISO 2709 serializer]\n\n\n\n\n\nKNOWN PARAMETERS---------------------------------\n\n    collection_namespace\n\n    collection_label\n\n    collection_abbr\n\n    collection_host_url\n\n\n\nJSON EXTRACTED PROPERTIES------------------------\n\n    album_id = album_json['album']['id']\n\n    main_artist_name = album_json['album']['main_artist_name']\n\n    artist_is_group = album_json['album']['artist_is_group']\n\n    album_title = album_json['album']['title']\n\n    release_date = normalize_date(album_json['album']['release_date'])\n\n    record_label = album_json['album']['record_label']\n\n    submission_round = album_json['album']['round']\n\n    album_tracks = album_json['album']['tracks']\n\n    spoken_languages = album_json['album']['spoken_languages']\n\n    genre = album_json['album']['genre']\n\n    front_cover_art_link = album_json['album']['front_cover_art']\n\n\n\nFUNCTIONS----------------------------------------\n\n    biblio_name(main_artist_name)\n\n    normalize_date(release_date)\n\n    release_year(release_date)\n\n    release_decade(release_date)\n\n    render_track_duration(track_duration)\n\n    pretty_comma_list(listexpr)\n\n    total_play_length(album_tracks)\n\n    compute_control_number(album_id, collection_abbr)\n\n\n\nMARC FIELD TEMPLATES------------------------------------\n\nLDR:\n    # The ISO 2709 LDR for a MARC 21 record will look like this:\n    # 000000000011111111112222    tens digit of position index\n    # 012345678901234567890123    ones digit of position index\n    # ........................    24 positions (dots are placeholders for spaces)\n    # 00000.......00000.......    Numeric placeholders: runtime length/position\n    # 00000.....2200000...4500    MARC 21 fixed values per specification\n    # 00000....a2200000...4500    MARCout fixed value for Unicode character set. \n    #\n    # This leaves the following code open for assignment. Any code\n    # position that:\n    #\n    #   1. has no default (default is determined by prior consensus, and \n    #       is provided informationally here; editing it in this MARCout \n    #       export definition has no effect), and \n    #\n    #   2. is not overridden by editing the OVERRIDE field in this\n    #       export definition:\n    #\n    # will be replaced by a single space in the exported LDR.\n    # \n    # Note that the LDR, which is an ISO 2709-specific artifact, will be\n    # provided in ALL serializations.\n    #\n    # NOTES:\n    #   1. In non-ISO 2709 serializations, the file arithmetic positions 00-04 \n    #       and 12-16 will be filled with zeroes, since the file arithmetic is\n    #       meaningless for other file types.\n    #\n    #   2. Ignoring the LDR is the responsibility of the party consuming the\n    #       export.\n    #\n    BIBLIO CODES\n        LDR POS: 05 - Record status # (default \"n\": New Record)\n            OVERRIDE: \n        LDR POS: 06 - Type of record # (default \"j\": New Record)\n            OVERRIDE: \n        LDR POS: 07 - Bibliographic level # (default \"m\": New Record)\n            OVERRIDE: \n        LDR POS: 08 - Type of control\n            OVERRIDE: \n        LDR POS: 17 - Encoding level # (default \"1\": Full Level, Material Not Encoded)\n            OVERRIDE: \n        LDR POS: 18 - Descriptive cataloging form\n            OVERRIDE: \n        LDR POS: 19 - Multipart resource record level\n            OVERRIDE: \n\n\nFIELD: 001\n    CONTENT: compute_control_number(album_id, collection_abbr)\n\n\nFIELD: 003\n    CONTENT: collection_label + ' MUSICat'\n\n\n# example of commenting out a block of code\n#FIELD: 003\n#    SUBFIELD: a\n#        collection_label + ' MUSICat'\n\n\nFIELD: 100\n# note that \"EXPORT UNLESS\" is a default: if the property is missing or screwed up,\n# that counts as (\"artist_is_group\": false), so you DO export this field.\nEXPORT UNLESS: artist_is_group IS TRUE     # This is the conjectural \"artist_is_group\" property\nINDC1: 1\nINDC2: blank\n    SUBFIELD: a                         # subfield code on same line\n        # it's OK to have a comment in between -- they get stripped out first\n        biblio_name(main_artist_name)   # subfield value on VERY NEXT non-comment line\n\n\nFIELD: 110\nEXPORT WHEN: artist_is_group IS TRUE\nINDC1: 2\nINDC2: blank\n    SUBFIELD: a\n        main_artist_name + ' (Musical group)'\n\n\nFIELD: 245\nINDC1: 1\nINDC2: 0\n    SUBFIELD: a\n        album_title\n    SUBFIELD: c\n        main_artist_name\n\n\nFIELD: 260\nINDC1: blank\nINDC2: blank\n    SUBFIELD: a\n        '[Place of publication not indicated] :'\n    SUBFIELD: b\n        record_label\n    SUBFIELD: c\n        release_year(release_date)\n\n\nFIELD: 300\nINDC1: blank\nINDC2: blank\n    SUBFIELD: 1\n        'online resource (1 audio file (' + total_play_length(album_tracks) + ')) ;'\n    SUBFIELD: b\n        'digital'\n\n\nFIELD: 500\nINDC1: blank\nINDC2: blank\n    SUBFIELD: a\n        'MUSICat Submission Round: ' + submission_round\n\n\nFIELD: 506\nINDC1: blank\nINDC2: blank\n    SUBFIELD: a\n        'Streaming available to Library patrons.'\n    SUBFIELD: m\n        collection_label + ' content provided by MUSICat'\n\n\nFIELD: 511\nINDC1: blank\nINDC2: blank\n    SUBFIELD: a\n        'Performed by ' + main_artist_name\n\n\nFIELD: 505\nINDC1: 0\nINDC2: 0\n    FOR EACH: track in album_tracks\n        # EACH-PREFIX:\n        EACH-SUBFIELD: t\n            track::title\n        EACH-SUBFIELD: g\n            render_duration(track::duration)\n        EACH-SUFFIX: ' --'\n        SORT BY: track::position\n\n\nFIELD: 546\nINDC1: blank\nINDC2: blank\n    SUBFIELD: a\n        'Sung in ' + pretty_comma_list(spoken_languages)\n\n\nFIELD: 650\nINDC1: blank\nINDC2: 0\n    SUBFIELD: a\n        genre\n    SUBFIELD: y\n        release_decade(release_date)\n\n\nFIELD: 710\nINDC1: 2\nINDC2: blank\n    SUBFIELD: a\n        'Rabble, LLC'\n    SUBFIELD: u\n        'MUSICat'\n\n\n# subfield 42\nFIELD: 856\nINDC1: 4\nINDC2: 2\n    SUBFIELD: z\n        'Cover image'\n    SUBFIELD: u\n        front_cover_art_link\n\n\n# subfield 40\nFIELD: 856\nINDC1: 4\nINDC2: 0\n    SUBFIELD: u\n        collection_host_url + '/albums/' + album_id\n    SUBFIELD: z\n        'Click here to access this electronic item'\n\n",
     "records": [{
         "album": {
-            "badge_tag": null,
             "front_cover_art": "https://playback-jsfs.spl.org/complete-submission/albums/gabriel-teodros-and-airme-children-of-the-dragon/childrenofthedragon-1.jpg",
-            "upc": null,
-            "asset_type": "album",
+            "record_label": "Independent",
+            "auth_required_to_stream": false,
             "badge_image": null,
             "genre": "Rap & Hip Hop",
-            "record_label": "Independent",
-            "round": "playback-spring-2016",
-            "release_date": "2014-05-07T07:00:00.000Z",
-            "auth_required_to_stream": false,
-            "title": "Children Of The Dragon",
+            "upc": null,
             "main_artist_name": "Gabriel Teodros & AirMe",
+            "main_artist": "gabriel-teodros-and-airme",
+            "artist_is_group": true,
+            "title": "Children Of The Dragon",
+            "badge_tag": null,
+            "id": "gabriel-teodros-and-airme-children-of-the-dragon",
+            "asset_type": "album",
+            "spoken_languages": "English",
             "tracks": [{
+                "position": 12,
                 "duration": 164.1547052154195,
                 "filename": "12 Stay Present.mp3",
-                "title": "Stay Present",
                 "access_token": "75c25e8da29a98d9d2a61d5bcad6bf9689852f6d",
-                "url": "https://playback-jsfs.spl.org/complete-submission/gabriel-teodros-and-airme-children-of-the-dragon/12-stay-present--1467324941000.mp3",
-                "position": 12
+                "title": "Stay Present",
+                "url": "https://playback-jsfs.spl.org/complete-submission/gabriel-teodros-and-airme-children-of-the-dragon/12-stay-present--1467324941000.mp3"
             }, {
+                "position": 11,
                 "duration": 126.72141723356009,
                 "filename": "11 Grow Up Before You Blow Up (ft. Luam Kidane).mp3",
-                "title": "Grow Up Before You Blow Up (ft. Luam Kidane)",
                 "access_token": "d336ad8eeba947a2904167a905cc506b00462c3b",
-                "url": "https://playback-jsfs.spl.org/complete-submission/gabriel-teodros-and-airme-children-of-the-dragon/11-grow-up-before-you-blow-up-ft-luam-kidane--1467324941000.mp3",
-                "position": 11
+                "title": "Grow Up Before You Blow Up (ft. Luam Kidane)",
+                "url": "https://playback-jsfs.spl.org/complete-submission/gabriel-teodros-and-airme-children-of-the-dragon/11-grow-up-before-you-blow-up-ft-luam-kidane--1467324941000.mp3"
             }, {
+                "position": 10,
                 "duration": 112.79801587301587,
                 "filename": "10 Parable Of The Dragon.mp3",
-                "title": "Parable Of The Dragon",
                 "access_token": "c76b6e86d6b2e8fb1f47fd2814a7b91fa0b6fc57",
-                "url": "https://playback-jsfs.spl.org/complete-submission/gabriel-teodros-and-airme-children-of-the-dragon/10-parable-of-the-dragon--1467324941000.mp3",
-                "position": 10
+                "title": "Parable Of The Dragon",
+                "url": "https://playback-jsfs.spl.org/complete-submission/gabriel-teodros-and-airme-children-of-the-dragon/10-parable-of-the-dragon--1467324941000.mp3"
             }, {
+                "position": 9,
                 "duration": 181.52625850340135,
                 "filename": "09 In A Post-Apocalyptic B-Boy Stance.mp3",
-                "title": "In A Post-Apocalyptic B-Boy Stance",
                 "access_token": "237ef078e7d142a0046b81022eed6337a66de2a5",
-                "url": "https://playback-jsfs.spl.org/complete-submission/gabriel-teodros-and-airme-children-of-the-dragon/09-in-a-post-apocalyptic-b-boy-stance--1467324941000.mp3",
-                "position": 9
+                "title": "In A Post-Apocalyptic B-Boy Stance",
+                "url": "https://playback-jsfs.spl.org/complete-submission/gabriel-teodros-and-airme-children-of-the-dragon/09-in-a-post-apocalyptic-b-boy-stance--1467324941000.mp3"
             }, {
+                "position": 8,
                 "duration": 171.4167120181406,
                 "filename": "08 Clarity.mp3",
-                "title": "Clarity",
                 "access_token": "bf3324c109e6b227c542e98163a1f8bc80ca7537",
-                "url": "https://playback-jsfs.spl.org/complete-submission/gabriel-teodros-and-airme-children-of-the-dragon/08-clarity--1467324941000.mp3",
-                "position": 8
+                "title": "Clarity",
+                "url": "https://playback-jsfs.spl.org/complete-submission/gabriel-teodros-and-airme-children-of-the-dragon/08-clarity--1467324941000.mp3"
             }, {
+                "position": 7,
                 "duration": 97.7514058956916,
                 "filename": "07 Prayer.mp3",
-                "title": "Prayer",
                 "access_token": "ea1845cfc2dbdbbb0e7b933edb7af9bcd5901e3a",
-                "url": "https://playback-jsfs.spl.org/complete-submission/gabriel-teodros-and-airme-children-of-the-dragon/07-prayer--1467324941000.mp3",
-                "position": 7
+                "title": "Prayer",
+                "url": "https://playback-jsfs.spl.org/complete-submission/gabriel-teodros-and-airme-children-of-the-dragon/07-prayer--1467324941000.mp3"
             }, {
+                "position": 6,
                 "duration": 188.39631519274377,
                 "filename": "06 Bole Road.mp3",
-                "title": "Bole Road",
                 "access_token": "2e5142a58f7559a20aff0849139284fe580de2ce",
-                "url": "https://playback-jsfs.spl.org/complete-submission/gabriel-teodros-and-airme-children-of-the-dragon/06-bole-road--1467324941000.mp3",
-                "position": 6
+                "title": "Bole Road",
+                "url": "https://playback-jsfs.spl.org/complete-submission/gabriel-teodros-and-airme-children-of-the-dragon/06-bole-road--1467324941000.mp3"
             }, {
+                "position": 5,
                 "duration": 163.8934693877551,
                 "filename": "05 Frida Kahlo.mp3",
-                "title": "Frida Kahlo",
                 "access_token": "76eaf891f957a77b31060be110527a02ae31f2f5",
-                "url": "https://playback-jsfs.spl.org/complete-submission/gabriel-teodros-and-airme-children-of-the-dragon/05-frida-kahlo--1467324941000.mp3",
-                "position": 5
+                "title": "Frida Kahlo",
+                "url": "https://playback-jsfs.spl.org/complete-submission/gabriel-teodros-and-airme-children-of-the-dragon/05-frida-kahlo--1467324941000.mp3"
             }, {
+                "position": 4,
                 "duration": 153.9931179138322,
                 "filename": "04 The City Of Bruce Lee.mp3",
-                "title": "The City Of Bruce Lee",
                 "access_token": "1c5f0680814c76d392872929f9c5404ceba2fe50",
-                "url": "https://playback-jsfs.spl.org/complete-submission/gabriel-teodros-and-airme-children-of-the-dragon/04-the-city-of-bruce-lee--1467324941000.mp3",
-                "position": 4
+                "title": "The City Of Bruce Lee",
+                "url": "https://playback-jsfs.spl.org/complete-submission/gabriel-teodros-and-airme-children-of-the-dragon/04-the-city-of-bruce-lee--1467324941000.mp3"
             }, {
+                "position": 3,
                 "duration": 196.12871882086168,
                 "filename": "03 Beyond The Shadow Of A Doubt Monster.mp3",
-                "title": "Beyond The Shadow Of A Doubt Monster",
                 "access_token": "5030fdc58a9f2e3638994783cb7b0680b420d500",
-                "url": "https://playback-jsfs.spl.org/complete-submission/gabriel-teodros-and-airme-children-of-the-dragon/03-beyond-the-shadow-of-a-doubt-monster--1467324941000.mp3",
-                "position": 3
+                "title": "Beyond The Shadow Of A Doubt Monster",
+                "url": "https://playback-jsfs.spl.org/complete-submission/gabriel-teodros-and-airme-children-of-the-dragon/03-beyond-the-shadow-of-a-doubt-monster--1467324941000.mp3"
             }, {
+                "position": 2,
                 "duration": 203.52132653061224,
                 "filename": "02 24 Hour Layover (ft. Mahi Mo).mp3",
-                "title": "24 Hour Layover (ft. Mahi Mo)",
                 "access_token": "3b7681f814a957ad97b107c64fd582f12074e830",
-                "url": "https://playback-jsfs.spl.org/complete-submission/gabriel-teodros-and-airme-children-of-the-dragon/02-24-hour-layover-ft-mahi-mo--1467324941000.mp3",
-                "position": 2
+                "title": "24 Hour Layover (ft. Mahi Mo)",
+                "url": "https://playback-jsfs.spl.org/complete-submission/gabriel-teodros-and-airme-children-of-the-dragon/02-24-hour-layover-ft-mahi-mo--1467324941000.mp3"
             }, {
+                "position": 1,
                 "duration": 151.09357142857144,
                 "filename": "01 Re_ Invent (ft. Luam Kidane).mp3",
-                "title": "Re: Invent (ft. Luam Kidane)",
                 "access_token": "262a2e92c65793e1c8ba71b86aebc7dfa983775c",
-                "url": "https://playback-jsfs.spl.org/complete-submission/gabriel-teodros-and-airme-children-of-the-dragon/01-re_-invent-ft-luam-kidane--1467324941000.mp3",
-                "position": 1
+                "title": "Re: Invent (ft. Luam Kidane)",
+                "url": "https://playback-jsfs.spl.org/complete-submission/gabriel-teodros-and-airme-children-of-the-dragon/01-re_-invent-ft-luam-kidane--1467324941000.mp3"
             }],
-            "main_artist": "gabriel-teodros-and-airme",
-            "spoken_languages": "English",
-            "artist_is_group": true,
-            "id": "gabriel-teodros-and-airme-children-of-the-dragon"
+            "release_date": "2014-05-07T07:00:00.000Z",
+            "round": "playback-spring-2016"
         },
         "owner": "ee7391caa51ae97ca139fb8fffe4cb3749606b21"
     }, {
         "album": {
-            "badge_tag": null,
             "front_cover_art": "https://boombox-jsfs.library.nashville.org/complete-submission/albums/mischa-lively-album/1500x1500_300ppi_pillow_digi_ep_art_rgb.jpg",
-            "upc": null,
-            "asset_type": "album",
+            "record_label": "RACECAR",
+            "auth_required_to_stream": false,
             "badge_image": null,
             "genre": "Dance & Electronic",
-            "record_label": "RACECAR",
-            "round": "boombox-fall-2016",
-            "release_date": "2016-05-20T00:00:00.000Z",
-            "auth_required_to_stream": false,
-            "title": "Pillow",
+            "upc": null,
             "main_artist_name": "Mischa Lively",
+            "main_artist": "mischa-lively",
+            "artist_is_group": false,
+            "title": "Pillow",
+            "badge_tag": null,
+            "id": "mischa-lively-album",
+            "asset_type": "album",
+            "spoken_languages": "English",
             "tracks": [{
+                "position": 4,
                 "duration": 400.06068027210887,
                 "filename": "4-Held Open.wav",
-                "title": "Held Open",
                 "access_token": "cc7163c59ff3ae7501cfc65bb835165c5946c689",
-                "url": "https://boombox-jsfs.library.nashville.org/complete-submission/mischa-lively-album/4-held-open--1474315403000.wav",
-                "position": 4
+                "title": "Held Open",
+                "url": "https://boombox-jsfs.library.nashville.org/complete-submission/mischa-lively-album/4-held-open--1474315403000.wav"
             }, {
+                "position": 3,
                 "duration": 364.61401360544215,
                 "filename": "3-A Posture For Learning.wav",
-                "title": "A Posture For Learning",
                 "access_token": "3e1d204b2707e3f4565b36a1ae12104c0ad3e5f2",
-                "url": "https://boombox-jsfs.library.nashville.org/complete-submission/mischa-lively-album/3-a-posture-for-learning--1474315403000.wav",
-                "position": 3
+                "title": "A Posture For Learning",
+                "url": "https://boombox-jsfs.library.nashville.org/complete-submission/mischa-lively-album/3-a-posture-for-learning--1474315403000.wav"
             }, {
+                "position": 2,
                 "duration": 308.56820861678005,
                 "filename": "2-Blakeup.wav",
-                "title": "Blakeup",
                 "access_token": "4278bff4e224f6cb8ea564a05f73631a483b622e",
-                "url": "https://boombox-jsfs.library.nashville.org/complete-submission/mischa-lively-album/2-blakeup--1474315403000.wav",
-                "position": 2
+                "title": "Blakeup",
+                "url": "https://boombox-jsfs.library.nashville.org/complete-submission/mischa-lively-album/2-blakeup--1474315403000.wav"
             }, {
+                "position": 1,
                 "duration": 509.6957823129252,
                 "filename": "1-Pillow.wav",
-                "title": "Pillow",
                 "access_token": "7e9440a2438e3435a91aafcdce034c2016b018ea",
-                "url": "https://boombox-jsfs.library.nashville.org/complete-submission/mischa-lively-album/1-pillow--1474315403000.wav",
-                "position": 1
+                "title": "Pillow",
+                "url": "https://boombox-jsfs.library.nashville.org/complete-submission/mischa-lively-album/1-pillow--1474315403000.wav"
             }],
-            "main_artist": "mischa-lively",
-            "spoken_languages": "English",
-            "artist_is_group": false,
-            "id": "mischa-lively-album"
+            "release_date": "2016-05-20T00:00:00.000Z",
+            "round": "boombox-fall-2016"
         },
         "owner": "be772e054e21d314f1a4ee9040308af6e1cb6609"
     }]
- }
+}

@@ -93,12 +93,12 @@ FUNCTIONS----------------------------------------
 MARC FIELD TEMPLATES------------------------------------
 
 LDR:
-    # The ISO 2709 serialization of a MARC 21 record will look like this:
+    # The ISO 2709 LDR for a MARC 21 record will look like this:
     # 000000000011111111112222    tens digit of position index
     # 012345678901234567890123    ones digit of position index
     # ........................    24 positions (dots are placeholders for spaces)
     # 00000.......00000.......    Numeric placeholders: runtime length/position
-    # 00000.....2200000...4500    MARC 21 fixed values
+    # 00000.....2200000...4500    MARC 21 fixed values per specification
     # 00000....a2200000...4500    MARCout fixed value for Unicode character set. 
     #
     # This leaves the following code open for assignment. Any code
@@ -113,24 +113,32 @@ LDR:
     #
     # will be replaced by a single space in the exported LDR.
     # 
-    # Note that the LDR, which is an ISO 2709- specific artifact, will be
-    # provided in all serializations. Ignoring the LDR is the responsibility
-    # of the party consuming the export.
+    # Note that the LDR, which is an ISO 2709-specific artifact, will be
+    # provided in ALL serializations.
+    #
+    # NOTES:
+    #   1. In non-ISO 2709 serializations, the file arithmetic positions 00-04 
+    #       and 12-16 will be filled with zeroes, since the file arithmetic is
+    #       meaningless for other file types.
+    #
+    #   2. Ignoring the LDR is the responsibility of the party consuming the
+    #       export.
+    #
     BIBLIO CODES
-        LDR POS: 05 - Record status # (default "n" for new record)
-            OVERRIDE: a
-        LDR POS: 06 - Type of record
-            OVERRIDE: b
-        LDR POS: 07 - Bibliographic level
-            OVERRIDE: c
+        LDR POS: 05 - Record status # (default "n": New Record)
+            OVERRIDE: 
+        LDR POS: 06 - Type of record # (default "j": New Record)
+            OVERRIDE: 
+        LDR POS: 07 - Bibliographic level # (default "m": New Record)
+            OVERRIDE: 
         LDR POS: 08 - Type of control
             OVERRIDE: 
-        LDR POS: 17 - Encoding level
-            OVERRIDE: e
+        LDR POS: 17 - Encoding level # (default "1": Full Level, Material Not Encoded)
+            OVERRIDE: 
         LDR POS: 18 - Descriptive cataloging form
-            OVERRIDE: f
+            OVERRIDE: 
         LDR POS: 19 - Multipart resource record level
-            OVERRIDE: g
+            OVERRIDE: 
 
 
 FIELD: 001
@@ -222,13 +230,13 @@ FIELD: 505
 INDC1: 0
 INDC2: 0
     FOR EACH: track in album_tracks
+        # EACH-PREFIX:
         EACH-SUBFIELD: t
             track::title
         EACH-SUBFIELD: g
             render_duration(track::duration)
-        SORT BY: track::position
-        # EACH-PREFIX:
         EACH-SUFFIX: ' --'
+        SORT BY: track::position
 
 
 FIELD: 546

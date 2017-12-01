@@ -23,6 +23,7 @@ def get_param_content(param):
     content = param
     patherrors = []
 
+    contentfile = None
     try:
         filepath = os.path.abspath(param)
         contentfile = open(filepath, 'r')
@@ -30,7 +31,8 @@ def get_param_content(param):
     except Exception as e:
         patherrors.append(e)
     finally:
-        contentfile.close()
+        if contentfile:
+            contentfile.close()
 
     return content, filepath, patherrors
 

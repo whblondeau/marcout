@@ -71,6 +71,7 @@ marcout_rewrites = {
 
 # ISO 2709 LDR: MARCout constant, 24 chars in length
 iso_2709_ldr_template = '00000....a2200000...4500'
+iso_2709_ldr_defaults = {'05': 'n', '06': 'j', '07': 'm', '17': '1'}
 
 
 
@@ -149,7 +150,16 @@ def render_ldr(ldr_field_def):
     returns the 24-character representation with zeroes for run time content,
     spaces for non-valued content.
     '''
+    #TODO this is not very efficient, I think...
+
     retval = iso_2709_ldr_template
+
+    # apply defaults
+    for key in iso_2709_ldr_defaults:
+        pos = int(key)
+        retval = retval[:pos] + iso_2709_ldr_defaults[key] + retval[pos + 1:]
+
+    # apply MARCout override declarations
     for key in ldr_field_def.keys():
         if key.isdigit() and ldr_field_def[key]:
             # this is something to write
