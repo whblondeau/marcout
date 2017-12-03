@@ -1,0 +1,23 @@
+
+1. Parse ISO2709 into fields by interpreting the Directory.
+
+2. Reconstruct fields into ISO2709.
+
+3. Turn 1 & 2 into lossless round trip.
+
+4. LDR:   Get length and make sure it works. (hack as necessary...)
+
+5. LDR length computation based on raw.
+
+6. Finish the round trip marc21 ISO 2709: turn an ISO 2709 example into a raw form, and a raw form into ISO 2709. Lossless roundtrip.
+
+7. Check form against MARCEdit.
+
+8. Make the Web Service use it.
+
+9. FIX: change FOREACH output into a list of subfields. Then fix serializations to use proper output.
+
+10. AWESOME: make XML output serialization from raw
+
+11. AWESOMER: make XML in-memory Document in lieu of Raw.
+

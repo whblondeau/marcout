@@ -28,9 +28,21 @@ def parse_unified_json(param, verbose=False):
     jsonobj = param
     errors = []
 
+    print()
+    print('+++++++++++++++++++++++++++++++++++++++++++++')
+    print('JSON Parameter of type ' + str(type(param)))
+    print(common.truncate_msg(param, 120))
+    print()
+
     if isinstance(param, (str, bytes,)):
         # param might be a filepath, or raw content
         jsontext, filepath, errors = common.get_param_content(param)
+
+        print()
+        print('******************************************')
+        print('JSON Text:')
+        print(common.truncate_msg(jsontext, 120))
+        print()
 
         if jsontext:
 
@@ -40,11 +52,19 @@ def parse_unified_json(param, verbose=False):
                 print(common.truncate_msg(jsontext, 120))
 
             try:
+                print('ABOUT TO PARSE')
                 unified_json_obj = json.loads(unified_json_parameter)
+                print('JUST PARSED')
                 if verbose:
                     print('...successfully parsed JSON content.')
             except Exception as e:
                 # parse died --> no good
+                print('EXCEPTION:')
+                print(e)
+                print()
+                print('JSONOBJ:')
+                print(jsonobj)
+                print()
                 errors.append(e)
                 jsonobj = None
 
@@ -56,6 +76,12 @@ def parse_unified_json(param, verbose=False):
             if verbose:
                 print('No JSON Content found.')
             jsonobj = None
+
+    print()
+    print('??????????????????????????????')
+    print('jsonobj is of type ' + str(type(jsonobj)))
+    print()
+    print()
 
     return jsonobj, errors
 
