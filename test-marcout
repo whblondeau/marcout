@@ -46,7 +46,7 @@ call_params = [arg for arg in sys.argv[1:] if not arg.startswith('-')]
 verbose = '--verbose' in call_options
 
 # default: use local copy
-unified_json_path = 'unified-json.json'
+
 if call_params:
     unified_json_path = call_params[0]
 
@@ -73,6 +73,7 @@ with open(unified_json_path) as json_file:
         print('====================================================')
         print()
 
-    # print(marc_export)
+    for record in marc_export:
+        print(record)
 
 

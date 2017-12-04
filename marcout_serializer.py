@@ -1,9 +1,6 @@
 #!/usr/bin/python3
 
 
-
-
-
 # =============================================================================
 #
 # ================== SERIALIZATION FUNCTIONS ==================================
@@ -95,6 +92,17 @@ def serialize_xml(marc_record_fields):
     '''Returns MARCXML representation
     '''
     raise Exception('serialize_xml not yet implemented.')
+
+
+def serialize_records(marc_record_list, sz_name):
+    '''Accepts a list of MARCout records in raw data form and applies
+    requested serialization to each.
+    '''
+    retval = []
+    for marc_record in marc_record_list:
+        retval.append(serializations[sz_name](marc_record))
+
+    return retval
 
 
 # =============================================================================

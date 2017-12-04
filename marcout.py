@@ -2,7 +2,10 @@
 
 import marcout_common as common
 import marcout_parser as parser
+import marcout_exporter as exporter
 import marcout_serializer as serializer
+
+import json
 
 
 # =============================================================================
@@ -24,69 +27,39 @@ def parse_unified_json(param, verbose=False):
     # the Flask catcher gets the JSON object as an ImmutableMultiDict
     # which looks VERY messed up when serialized... can we just treat it
 
-    # assume it's already a parsed JSON object
+    # logic: assume it's already a parsed JSON object
     jsonobj = param
     errors = []
 
-    print()
-    print('+++++++++++++++++++++++++++++++++++++++++++++')
-    print('JSON Parameter of type ' + str(type(param)))
-    print(common.truncate_msg(param, 120))
-    print()
-
     if isinstance(param, (str, bytes,)):
         # param might be a filepath, or raw content
-        jsontext, filepath, errors = common.get_param_content(param)
-
-        print()
-        print('******************************************')
-        print('JSON Text:')
-        print(common.truncate_msg(jsontext, 120))
-        print()
+        jsontext = common.get_param_content(param)
 
         if jsontext:
 
             # parse content
             if verbose:
-                print('JSON content:')
+                print('JSON text content:')
                 print(common.truncate_msg(jsontext, 120))
 
             try:
-                print('ABOUT TO PARSE')
-                unified_json_obj = json.loads(unified_json_parameter)
-                print('JUST PARSED')
+                jsonobj = json.loads(jsonobj)
                 if verbose:
                     print('...successfully parsed JSON content.')
             except Exception as e:
                 # parse died --> no good
-                print('EXCEPTION:')
-                print(e)
-                print()
-                print('JSONOBJ:')
-                print(jsonobj)
-                print()
-                errors.append(e)
-                jsonobj = None
-
-            if verbose:
                 print('JSON parse failed.')
+                print(e)
         else:
-
             # we struck out
             if verbose:
                 print('No JSON Content found.')
             jsonobj = None
 
-    print()
-    print('??????????????????????????????')
-    print('jsonobj is of type ' + str(type(jsonobj)))
-    print()
-    print()
-
-    return jsonobj, errors
+    return jsonobj
 
 
-def resolve_unified_json(unified_jsonobj):
+def resolve_unified_json(unified_jsonobj, verbose=False):
     '''This function accepts a parsed JSON object, interprets it,
     and returns a dictionary containing four items:
         - the MARCout Engine parsed from "marcout_text";
@@ -124,6 +97,8 @@ def resolve_unified_json(unified_jsonobj):
     collection_info = unified_jsonobj['collection_info']
     records_to_export = unified_jsonobj['records']
 
+    # there might be other info in the serialization request,
+    # but the name MUST be present.
     sz_name = requested_serialization['serialization-name']
     # does the serializer know about this?
     if sz_name not in serializer.serializations:
@@ -138,7 +113,8 @@ def resolve_unified_json(unified_jsonobj):
     # statements to govern selection, content, and formatting for
     # exported MARC record fields.
 
-    # cut the text clob into array of lines, and parse
+    # Parser is line-oriented. Cut the text clob into array of lines,
+    # and parse
     marcout_lines = marcout_text.split('\n')
     marcout_engine = parser.parse_marcexport_deflines(marcout_lines)
 
@@ -179,18 +155,20 @@ def resolve_unified_json(unified_jsonobj):
 
 def export_records(unified_jsonobj, verbose=False):
 
-    unified_jsonobj = parse_unified_json(unified_jsonobj)
+    unified_jsonobj = parse_unified_json(unified_jsonobj, verbose)
 
     # turn the JSON into the Export Workset, with parsed MARCout Engine,
     # records in the anticipated JSON form, and export directives &
     # collection-specific metadata.
-    export_workset = resolve_unified_json(unified_jsonobj)
+    export_workset = resolve_unified_json(unified_jsonobj, verbose)
 
     # The Export Workset, without external data dependencies, contains sufficient
     # information to generate a list of exported record datastructures.
-    exports = exporterexport_records_per_marcdef(export_workset)
+    exports = exporter.export_records_per_marcdef(export_workset, verbose)
 
-    # exports = serializer.serialize(exports, sz_name)
+    # apply requested serialization
+    sz_name = export_workset['serialization']
+    exports = serializer.serialize_records(exports, sz_name)
 
     return exports
 

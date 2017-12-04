@@ -1,5 +1,11 @@
 #!/usr/bin/python3
 
+import marcout_parser as parser
+import copy
+import hashlib
+
+
+debug_output = False
 
 # =============================================================================
 #
@@ -32,7 +38,7 @@ def marcout_is_true(expr):
     elif isinstance(expr, int):
         return expr == 1
 
-    elif isinstance(expr, types.StringTypes):
+    elif isinstance(expr, str):
         check_expr = str(expr).lower()
         if check_expr in ('true', 'yes'):
             return True
@@ -68,7 +74,7 @@ def marcout_is_false(expr):
     elif isinstance(expr, int):
         return expr == 0
 
-    elif isinstance(expr, types.StringTypes):
+    elif isinstance(expr, str):
         check_expr = str(expr).lower()
         if check_expr in ('false', 'no'):
             return True
@@ -100,7 +106,7 @@ def marcout_has_value(expr):
     if expr is None:
         return False
 
-    if isinstance(expr, types.StringTypes):
+    if isinstance(expr, str):
         check_expr = expr.strip()
         # False if `EMPTY`: whitespace or empty string
         if len(check_expr) == 0:
@@ -131,7 +137,7 @@ def marcout_has_no_value(expr_string):
     if expr is None:
         return True
 
-    if isinstance(expr, types.StringTypes):
+    if isinstance(expr, str):
         check_expr = expr.strip()
         # True if `EMPTY`: whitespace or empty string
         if len(check_expr) == 0:
@@ -286,7 +292,11 @@ def render_duration(duration_in_float_seconds):
 def total_play_length(tracks):
     float_seconds = 0.0
     for track in tracks:
-        float_seconds += track['duration']
+        try:
+            float_seconds += track['duration']
+        except:
+            print('=========================================== ERROR:')
+            print(track)
     return h_m_s(float_seconds)
 
 def compute_control_number(album_id, collection_abbr):
@@ -357,7 +367,7 @@ def rewrite_for_context(marcout_expr, context_expr, context_varname):
     context_varname: 'current_item'
     return value: "render_duration(current_item['duration'])"
     '''
-    tokens = tokenize(marcout_expr)
+    tokens = parser.tokenize(marcout_expr)
     for indx, token in enumerate(tokens):
         if token.startswith(context_expr):
             # change from MARCout notation to dict notation
@@ -471,14 +481,12 @@ def compute_expr(expr, current_rec_extracts, collection_info):
     retval = expr
 
     # this is a parse 
-    tokens = tokenize(expr)
+    tokens = parser.tokenize(expr)
     for indx, token in enumerate(tokens):
         if debug_output:
             print('TOKEN: ' + token)
-        if token[0] in opaques:
+        if token[0] in parser.opaques:
             # this is a string literal. Don't mess with it.
-            # print('skipping token:')
-            # print(token)
             continue
 
         # For code expressions:
@@ -581,7 +589,7 @@ def export_marc_field(template, current_rec_extracts, collection_info):
     return retval
 
 
-def export_records_per_marcdef(export_workset):
+def export_records_per_marcdef(export_workset, verbose):
     '''The parameter is an Export Workset. This is a dict containing all
     necessary information to export the records it contains:
     {
@@ -590,13 +598,17 @@ def export_records_per_marcdef(export_workset):
         'collection_info': collection info from unified JSON 
         'records_to_export': expected JSON representation of records
     }
+    RETURNS a List of exported records
     '''
 
+
+    # return value
     exported_marc_records = []
 
     # convenience variable
     engine_json_extractors = export_workset['marcout_engine']['json_extracted_properties']
     engine_field_templates = export_workset['marcout_engine']['marc_field_templates']
+    collection_info = export_workset['collection_info']
 
     for record in export_workset['records_to_export']:
 
@@ -609,38 +621,23 @@ def export_records_per_marcdef(export_workset):
         # These variables will then be referenceable in the
         # MARC field template expressions.
 
+        # a convenient parametric form for passing around extracted values.
         current_rec_extracts = {}
 
-        # Execute these extraction statements in context of the record
+        # Execute these extraction statements in context of the record.
+        # Stash values in current_rec_extracts.
         for key in engine_json_extractors:
             # coerce to strings
             varname = str(key)
-            varval = str(engine_json_extractors[key])
-            expr = varname + ' = ' + varval
-            try:
-                exec(expr)
-            except Exception as ex:
-                msg = 'Failure to execute "' + expr + '":'
-                msg += str(ex)
-                retval += msg + '\n'
+            varval_expr = str(engine_json_extractors[key])
+            varval = eval(varval_expr)
 
-            expr = 'current_rec_extracts[\'' + varname + '\'] = ' + varval
-            try:
-                exec(expr)
-            except Exception as ex:
-                msg = 'Failure to execute "' + expr + '":'
-                msg += str(ex)
-                retval += msg + '\n'
+            # add evaluation of varval to current_rec_extracts
+            current_rec_extracts[varname] = varval
 
-        if verbose:
-            retval += '\n'
-            retval += 'THESE ARE THE EXTRACTED VARIABLES:\n'
-            for key in sorted(engine_json_extractors.keys()):
-                # coerce to strings
-                varname = str(key)
-            retval += '\n'
 
-        # TODO ensure named functions are in scope.
+        # TODO ensure named functions are also in scope.
+        
 
         # Populate MARC field data structures by copying templates and
         # evaluating from the JSON content
@@ -670,17 +667,9 @@ def export_records_per_marcdef(export_workset):
                     # being filled and placed in the return
                     continue
 
-            record_output.append(populate_marc_field(template, current_rec_extracts, collection_info))
+            record_output.append(export_marc_field(template, current_rec_extracts, collection_info))
 
+        # put all of the fields for this record in the return val
         exported_marc_records.append(record_output)
 
-        if verbose:   
-            retval += '\n'
-            retval += '-------------------------------\n'
-            for item in exported_marc_records:
-                retval += '\n'
-                retval += str(item) + '\n'
-
-
-
-print('hey')
+    return exported_marc_records

@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import os.path
+import errno
 
 
 # =============================================================================
@@ -17,24 +18,24 @@ import os.path
 def get_param_content(param):
     '''This function accepts a string that is either a filepath or raw content.
     If it is the form of a filepath, this attempts to read and return that
-    content; otherwise it assumes the param is literal content.
+    content; otherwise it treats the param as literal content.
+    OSErrors, EXCEPT the obvious discriminator errno.ENAMETOOLONG which is taken
+    to mean a raw file, 
     '''
+    content = None
     filepath = None
-    content = param
-    patherrors = []
-
     contentfile = None
-    try:
-        filepath = os.path.abspath(param)
-        contentfile = open(filepath, 'r')
-        content = contentfile.read()
-    except Exception as e:
-        patherrors.append(e)
-    finally:
-        if contentfile:
-            contentfile.close()
 
-    return content, filepath, patherrors
+    # distinguish between filepath and raw content
+    if os.path.isfile(param):
+        filepath = param
+
+        with open(filepath, 'r') as contentfile:
+            content = contentfile.read()
+    else:
+        content = param
+
+    return content
 
 
 def truncate_msg(message, length):
