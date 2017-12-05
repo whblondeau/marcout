@@ -122,7 +122,7 @@ def iso_record_2_raw(iso_record):
 
     retval = []
     # begin with LDR
-    retval.append({'LDR': LDR})
+    retval.append({'tag': 'LDR', 'fixed': LDR})
 
     for entry in dir_entries:
         pair = read_iso_field_content(entry, fields)
@@ -228,28 +228,28 @@ def make_iso_directory(field_defs):
     retval = ''
     cur_startpos = 0
 
-    print()
-    print('MAKING ISO DIRECTORY----------------------------------')
+    # print()
+    # print('MAKING ISO DIRECTORY----------------------------------')
     for field in field_defs:
-        print()
-        print('field: ' + str(field))
+        # print()
+        # print('field: ' + str(field))
         # tag
         retval += field[0]
-        print('tag:' + field[0])
+        # print('tag:' + field[0])
         field_len = len(field[1])
         # length of field content, zeropadded to 4 chars
         length = ('0000' + str(field_len))[-4:]
-        print('length: ' + length)
+        # print('length: ' + length)
         retval += length
         # start position for this field
         start_pos = ('00000' + str(cur_startpos))[-5:]
-        print('start_pos: ' + start_pos)
+        # print('start_pos: ' + start_pos)
         retval += start_pos
         # move the counter
         cur_startpos = cur_startpos + field_len
 
-    print('DONE MAKING DIRECTORY---------------------------------')
-    print()
+    # print('DONE MAKING DIRECTORY---------------------------------')
+    # print()
     return retval
 
 
@@ -257,20 +257,20 @@ def raw_record_2_iso(raw_record):
     # raw_record is a list of field dicts, OPTIONALLY beginning with the
     # 24-charcter LDR code.
 
-    print()
-    print()
-    print('RAW RECORD:')
-    print(raw_record)
-    print()
-    print()
+    # print()
+    # print()
+    # print('RAW RECORD:')
+    # print(raw_record)
+    # print()
+    # print()
 
     LDR = None
 
     fields = []
 
     for raw_field in raw_record:
-        if 'LDR' in raw_field:
-            LDR = raw_field['LDR']
+        if raw_field['tag'] == 'LDR':
+            LDR = raw_field['fixed']
         else:
             # it's a normal field. Add (tag, content) to field list
             fields.append(raw_field_2_iso(raw_field))
@@ -301,11 +301,11 @@ def raw_record_2_iso(raw_record):
     fields_startpos = 24 + len(directory)
     # len as zeropadded string
     fields_startpos = ('00000' + str(fields_startpos))[-5:]
-    (print('FIELDS STARTPOS: ' + fields_startpos))
+    # (print('FIELDS STARTPOS: ' + fields_startpos))
     LDR = LDR[:12] + fields_startpos + LDR[17:]
 
-    print('LDR:')
-    print(LDR)
+    # print('LDR:')
+    # print(LDR)
 
     iso_record = LDR + iso_record
 
