@@ -153,7 +153,7 @@ def resolve_unified_json(unified_jsonobj, verbose=False):
     return retval
 
 
-def export_records(unified_jsonobj, verbose=False):
+def export_records(unified_jsonobj, as_string=False, verbose=False):
 
     unified_jsonobj = parse_unified_json(unified_jsonobj, verbose)
 
@@ -169,6 +169,9 @@ def export_records(unified_jsonobj, verbose=False):
     # apply requested serialization
     sz_name = export_workset['serialization']
     exports = serializer.serialize_records(exports, sz_name)
+
+    if as_string:
+        exports = '\n'.join(exports)
 
     return exports
 
