@@ -1,5 +1,7 @@
 #!/usr/bin/python3
 
+import marcout_iso2709 as iso
+
 
 # =============================================================================
 #
@@ -77,6 +79,8 @@ def serialize_text(marc_record_fields):
 def serialize_iso2709(marc_record_fields):
 
     retval = ''
+
+    retval = iso.raw_record_2_iso(marc_record_fields)
 
 
     return retval

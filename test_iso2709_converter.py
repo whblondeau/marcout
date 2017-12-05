@@ -1,7 +1,12 @@
+
+usage = '''USAGE: python3 test_iso2709_converter.py <
+'''
+
+
 # EXECUTE
 import sys
 
-import raw_iso2709_converter as iso
+import marcout_iso2709 as iso
 
 rawfilename = sys.argv[1]
 rawfile = open(rawfilename)
