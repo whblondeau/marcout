@@ -27,11 +27,15 @@ def marcout_export():
         return hlomsg
 
     elif request.method == 'POST':
+        print('POST! It is a POST!')
+        print('HEADERS:')
+        print(request.headers)
+        print()
         # we need the JSON unified parameter. Force=True will get JSON whether
         # the HTTP Content-Type is application/json or not.
         json_param = request.get_json(force=True)
-        # print('JSON:')
-        # print(json_param)
+        print('JSON:')
+        print(json_param)
         # use the marcout module to return the desired serialization
         serialized_records = ''
         try:
