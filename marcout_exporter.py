@@ -500,6 +500,7 @@ def compute_expr(expr, current_rec_extracts, collection_info):
                     print('EXTRACT: ' + str(extract))
 
                 extractval = current_rec_extracts[extract]
+
                 if debug_output:
                     print('EXTRACTVAL: ' + str(extractval))
                     print('IS STR: ' + str(isinstance(extractval, str)))
@@ -630,7 +631,21 @@ def export_records_per_marcdef(export_workset, verbose):
             # coerce to strings
             varname = str(key)
             varval_expr = str(engine_json_extractors[key])
-            varval = eval(varval_expr)
+
+            # apply any defaults left embedded by parser
+            default = None
+            if '::DEFAULT' in varval_expr:
+                varval_expr, default = varval_expr.split('::DEFAULT')
+                varval_expr = varval_expr.rstrip()
+                default = default.strip()
+
+            try:
+                varval = eval(varval_expr)
+            except Exception as e:
+                if verbose:
+                    print('EVAL EXCEPTION:')
+                    print(e)
+                varval = default
 
             # add evaluation of varval to current_rec_extracts
             current_rec_extracts[varname] = varval

@@ -248,6 +248,7 @@ elif call_options[0] == '--escape-marcout':
         escaped = escape_marcout(marcout)
         print(escaped)
 
+
 elif call_options[0] == '--update-json':
     arg_error = False
     if not unified_json: 

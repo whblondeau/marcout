@@ -50,7 +50,7 @@ JSON EXTRACTED PROPERTIES------------------------
 
     main_artist_name = album_json['album']['main_artist_name']
 
-    artist_is_group = album_json['album']['artist_is_group']
+    artist_is_group = album_json['album']['artist_is_group'] DEFAULT ''
 
     album_title = album_json['album']['title']
 
@@ -60,7 +60,7 @@ JSON EXTRACTED PROPERTIES------------------------
 
     submission_round = album_json['album']['round']
 
-    album_tracks = album_json['album']['tracks']
+    album_tracks = album_json['album']['tracks'] DEFAULT []
 
     spoken_languages = album_json['album']['spoken_languages']
 

@@ -164,15 +164,15 @@ def export_records(unified_jsonobj, as_string=False, verbose=False):
 
     # The Export Workset, without external data dependencies, contains sufficient
     # information to generate a list of exported record datastructures.
-    exports = exporter.export_records_per_marcdef(export_workset, verbose)
+    export_list = exporter.export_records_per_marcdef(export_workset, verbose)
 
     # apply requested serialization
     sz_name = export_workset['serialization']
-    exports = serializer.serialize_records(exports, sz_name)
+    export_list = serializer.serialize_records(export_list, sz_name, verbose)
 
     if as_string:
-        exports = '\n'.join(exports)
+        export_list = '\n'.join(export_list)
 
-    return exports
+    return export_list
 
 
