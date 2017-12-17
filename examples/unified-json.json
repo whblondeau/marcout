@@ -1,6 +1,6 @@
 {
     "requested_serialization": {
-        "serialization-name": "iso2709"
+        "serialization-name": "marc-text"
     },
     "collection_info": {
         "collection_abbr": "nbb",

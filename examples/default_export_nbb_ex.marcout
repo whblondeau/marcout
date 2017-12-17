@@ -1,0 +1,285 @@
+
+DESCRIPTION---------NASHVILLE (EXAMPLE ONLY!)--------
+
+MARCout is a high-level language for defining MARC bibliographic record
+exports. It's currently developed for MUSICat album records.
+
+MARCout describes the necessary prerequisites and desired fields in
+a simple declarative form. The hope is that MARCout authoring and editing
+should be within the grasp of bibliographers who are not programmers.
+
+MARCout PROCESS CHAIN
+
+    {MARCout export definition}
+        |
+         -->[MARCout parser]
+                |
+                 -->{export data structure}
+                            |
+                            |
+    {source record (JSON)}   -->[                       |
+        |                       |MARCout record exporter|                       |
+         ---------------------->|                       ]
+                                    |
+                                     -->{exported record}
+                                            |
+                                             --> [MARCout text serializer]
+                                            or
+                                            |
+                                             --> [MARCout ISO 2709 serializer]
+
+
+
+
+
+KNOWN PARAMETERS---------------------------------
+
+    collection_namespace
+
+    collection_label
+
+    collection_abbr
+
+    collection_host_url
+
+
+
+JSON EXTRACTED PROPERTIES------------------------
+
+    album_id = album_json['album']['id']
+
+    main_artist_name = album_json['album']['main_artist_name']
+
+    artist_is_group = album_json['album']['artist_is_group'] ::DEFAULT ''
+
+    album_title = album_json['album']['title']
+
+    release_date = normalize_date(album_json['album']['release_date'])
+
+    record_label = album_json['album']['record_label']
+
+    submission_round = album_json['album']['round']
+
+    album_tracks = album_json['album']['tracks']
+
+    spoken_languages = album_json['album']['spoken_languages']
+
+    genre = album_json['album']['genre']
+
+    front_cover_art_link = album_json['album']['front_cover_art']
+
+
+
+FUNCTIONS----------------------------------------
+
+    biblio_name(main_artist_name)
+
+    normalize_date(release_date)
+
+    release_year(release_date)
+
+    release_decade(release_date)
+
+    render_track_duration(track_duration)
+
+    pretty_comma_list(listexpr)
+
+    total_play_length(album_tracks)
+
+    compute_control_number(album_id, collection_abbr)
+
+
+
+MARC FIELD TEMPLATES------------------------------------
+
+LDR:
+    # The ISO 2709 LDR for a MARC 21 record will look like this:
+    # 000000000011111111112222    tens digit of position index
+    # 012345678901234567890123    ones digit of position index
+    # ........................    24 positions (dots are placeholders for spaces)
+    # 00000.......00000.......    Numeric placeholders: runtime length/position
+    # 00000.....2200000...4500    MARC 21 fixed values per specification
+    # 00000....a2200000...4500    MARCout fixed value for Unicode character set. 
+    #
+    # This leaves the following code open for assignment. Any code
+    # position that:
+    #
+    #   1. has no default (default is determined by prior consensus, and 
+    #       is provided informationally here; editing it in this MARCout 
+    #       export definition has no effect), and 
+    #
+    #   2. is not overridden by editing the OVERRIDE field in this
+    #       export definition:
+    #
+    # will be replaced by a single space in the exported LDR.
+    # 
+    # Note that the LDR, which is an ISO 2709-specific artifact, will be
+    # provided in ALL serializations.
+    #
+    # NOTES:
+    #   1. In non-ISO 2709 serializations, the file arithmetic positions 00-04 
+    #       and 12-16 will be filled with zeroes, since the file arithmetic is
+    #       meaningless for other file types.
+    #
+    #   2. Ignoring the LDR is the responsibility of the party consuming the
+    #       export.
+    #
+    BIBLIO CODES
+        LDR POS: 05 - Record status # (default "n": New Record)
+            OVERRIDE: 
+        LDR POS: 06 - Type of record # (default "j": Musical sound recording)
+            OVERRIDE: 
+        LDR POS: 07 - Bibliographic level # (default "m": Monograph/Item)
+            OVERRIDE: 
+        LDR POS: 08 - Type of control
+            OVERRIDE: 
+        LDR POS: 17 - Encoding level # (default "1": Full Level, Material Not Encoded)
+            OVERRIDE: 
+        LDR POS: 18 - Descriptive cataloging form
+            OVERRIDE: 
+        LDR POS: 19 - Multipart resource record level
+            OVERRIDE: 
+
+
+FIELD: 001
+    CONTENT: compute_control_number(album_id, collection_abbr)
+
+
+FIELD: 003
+    CONTENT: collection_label + ' MUSICat'
+
+
+# example of commenting out a block of code
+#FIELD: 003
+#    SUBFIELD: a
+#        collection_label + ' MUSICat'
+
+
+FIELD: 100
+# note that "EXPORT UNLESS" is a default: if the property is missing or screwed up,
+# that counts as ("artist_is_group": false), so you DO export this field.
+EXPORT UNLESS: artist_is_group IS TRUE     # This is the conjectural "artist_is_group" property
+INDC1: 1
+INDC2: blank
+    SUBFIELD: a                         # subfield code on same line
+        # it's OK to have a comment in between -- they get stripped out first
+        biblio_name(main_artist_name)   # subfield value on VERY NEXT non-comment line
+
+
+FIELD: 110
+EXPORT WHEN: artist_is_group IS TRUE
+INDC1: 2
+INDC2: blank
+    SUBFIELD: a
+        main_artist_name + ' (Musical group)'
+
+
+FIELD: 245
+INDC1: 1
+INDC2: 0
+    SUBFIELD: a
+        album_title
+    SUBFIELD: c
+        main_artist_name
+
+
+FIELD: 260
+INDC1: blank
+INDC2: blank
+    SUBFIELD: a
+        '[Place of publication not indicated] :'
+    SUBFIELD: b
+        record_label
+    SUBFIELD: c
+        release_year(release_date)
+
+
+FIELD: 300
+INDC1: blank
+INDC2: blank
+    SUBFIELD: 1
+        'online resource (1 audio file (' + total_play_length(album_tracks) + ')) ;'
+    SUBFIELD: b
+        'digital'
+
+
+FIELD: 500
+INDC1: blank
+INDC2: blank
+    SUBFIELD: a
+        'MUSICat Submission Round: ' + submission_round
+
+
+FIELD: 506
+INDC1: blank
+INDC2: blank
+    SUBFIELD: a
+        'Streaming available to Library patrons.'
+    SUBFIELD: m
+        collection_label + ' content provided by MUSICat'
+
+
+FIELD: 511
+INDC1: blank
+INDC2: blank
+    SUBFIELD: a
+        'Performed by ' + main_artist_name
+
+
+FIELD: 505
+INDC1: 0
+INDC2: 0
+    FOR EACH: track in album_tracks
+        # EACH-PREFIX:
+        EACH-SUBFIELD: t
+            track::title
+        EACH-SUBFIELD: g
+            render_duration(track::duration)
+        EACH-SUFFIX: ' --'
+        SORT BY: track::position
+
+
+FIELD: 546
+INDC1: blank
+INDC2: blank
+    SUBFIELD: a
+        'Sung in ' + pretty_comma_list(spoken_languages)
+
+
+FIELD: 650
+INDC1: blank
+INDC2: 0
+    SUBFIELD: a
+        genre
+    SUBFIELD: y
+        release_decade(release_date)
+
+
+FIELD: 710
+INDC1: 2
+INDC2: blank
+    SUBFIELD: a
+        'Rabble, LLC'
+    SUBFIELD: u
+        'MUSICat'
+
+
+# subfield 42
+FIELD: 856
+INDC1: 4
+INDC2: 2
+    SUBFIELD: z
+        'Cover image'
+    SUBFIELD: u
+        front_cover_art_link
+
+
+# subfield 40
+FIELD: 856
+INDC1: 4
+INDC2: 0
+    SUBFIELD: u
+        collection_host_url + '/albums/' + album_id
+    SUBFIELD: z
+        'Click here to access this electronic item'
+

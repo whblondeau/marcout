@@ -602,6 +602,14 @@ def export_records_per_marcdef(export_workset, verbose):
     RETURNS a List of exported records
     '''
 
+    if verbose:
+        print()
+        print('=============================================')
+        print('SERIALIZER INPUT: EXPORT_WORKSET')
+        print(export_workset)
+        print('=============================================')
+        print()
+
 
     # return value
     exported_marc_records = []
@@ -632,6 +640,10 @@ def export_records_per_marcdef(export_workset, verbose):
             varname = str(key)
             varval_expr = str(engine_json_extractors[key])
 
+            if verbose:
+                indent = ' ' * 2
+                print(indent + 'resolving `' + varname + ': ' + varval_expr)
+
             # apply any defaults left embedded by parser
             default = None
             if '::DEFAULT' in varval_expr:
@@ -643,11 +655,18 @@ def export_records_per_marcdef(export_workset, verbose):
                 varval = eval(varval_expr)
             except Exception as e:
                 if verbose:
-                    print('EVAL EXCEPTION:')
+                    indent = ' ' * 4
+                    print(indent + 'ATTEMPTING TO RESOLVE `' + varval_expr + '`')
+                    print(indent + 'EVAL EXCEPTION of type "' + str(type(e)) + '":')
                     print(e)
+                    print(indent + indent + 'APPLYING DEFAULT `' + default + '`')
+                    print()
                 varval = default
 
             # add evaluation of varval to current_rec_extracts
+            if verbose:
+                indent = ' ' * 2
+                print(indent + 'adding `' + str(varval) + '` to current_rec_extracts')
             current_rec_extracts[varname] = varval
 
 
@@ -682,9 +701,24 @@ def export_records_per_marcdef(export_workset, verbose):
                     # being filled and placed in the return
                     continue
 
-            record_output.append(export_marc_field(template, current_rec_extracts, collection_info))
+            exported_field = export_marc_field(template, current_rec_extracts, collection_info)
+            if verbose:
+                indent = ' ' * 2
+                print(indent + 'EXPORTING ' + template['tag'])
+
+            record_output.append(exported_field)
 
         # put all of the fields for this record in the return val
         exported_marc_records.append(record_output)
+
+
+    if verbose:
+        print()
+        print('=============================================')
+        print('SERIALIZER OUTPUT: EXPORTED_MARC_RECORDS:')
+        print(exported_marc_records)
+        print('=============================================')
+        print()
+
 
     return exported_marc_records
