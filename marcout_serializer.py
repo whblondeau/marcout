@@ -68,7 +68,7 @@ def serialize_text(marc_record_fields, verbose):
                 # subfield dict should only ever have one key & 
                 # one associated value.
                 subfield_code = list(subfield.keys())[0]
-                subfield_val = subfield[subfield_code]
+                subfield_val = str(subfield[subfield_code])
                 retval += subfield_code
                 retval += subfield_val
         if 'terminator' in field:

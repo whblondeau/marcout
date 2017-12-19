@@ -529,20 +529,30 @@ def compute_expr(expr, current_rec_extracts, collection_info):
                     print('TOKEN: ' + token)
 
         # whatever modifications have been made to token, update the tokens list
-        tokens[indx] = token
+
+        if str(token) == 'None':
+            token = '"' + str(token) + '"'
+
+        tokens[indx] = str(token)
 
     # concat tokens into content
     evaluable = ''.join(tokens)
 
-    retval = None
+    retval = ''
 
     # this second-stage eval applies functions, concats, etc
     if evaluable:
-        if debug_output:
-            print('EVALUATING "' + evaluable + '"')
-        retval = eval(evaluable)
-        if debug_output:
-            print('EVALUATED TO: ' + str(retval))
+        try:
+            if debug_output:
+                print('EVALUATING "' + evaluable + '"')
+            retval = eval(evaluable)
+            if debug_output:
+                print('EVALUATED TO: ' + str(retval))
+        except Exception as ex:
+            if verbose:
+                print('tokens: ')
+                print(tokens)
+                print('DIED ON ' + evaluable)
 
     return retval
 
@@ -645,7 +655,7 @@ def export_records_per_marcdef(export_workset, verbose):
                 print(indent + 'resolving `' + varname + ': ' + varval_expr)
 
             # apply any defaults left embedded by parser
-            default = None
+            default = ''
             if '::DEFAULT' in varval_expr:
                 varval_expr, default = varval_expr.split('::DEFAULT')
                 varval_expr = varval_expr.rstrip()
