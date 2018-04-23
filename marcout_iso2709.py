@@ -29,6 +29,12 @@ def entries_in_iso_directory(directory_string):
     is exactly 12 characters long).
     Otherwise raises a ValueError.
     '''
+
+    print('DIRECTORY STRING:')
+    print(directory_string)
+    print()
+    print()
+
     if not len(directory_string) >= dir_entry_size:
         raise ValueError('Directory string parameter requires a minimum of ' 
             + str(dir_entry_size) + 'chars.')
@@ -114,8 +120,14 @@ def iso_record_2_raw(iso_record):
     '''Parses an ISO 2709 record into MARCout raw datastructures.
     '''
     LDR = iso_record[:24]
+    print('LDR:')
+    print(LDR)
+    print()
     rest = iso_record[24:]
     first_delim_pos = rest.find(field_delimiter)
+    print('first_delim_pos:')
+    print(first_delim_pos)
+    print()
     directory = rest[:first_delim_pos]
     dir_entries = entries_in_iso_directory(directory)
     fields = rest[first_delim_pos:]
@@ -283,31 +295,48 @@ def raw_record_2_iso(raw_record):
 
     field_text = ''.join([field_def[1] for field_def in fields])
 
-    # put it all together
+
+    # this is a BINARY format. Take these strings of characters and 
+    # turn them into byte arrays that encode the characters as utf-8.
+    # these byte arrays are string-like, with string methods.
+    directory = directory.encode('utf-8')
+    field_text = field_text.encode('utf-8')
+    field_delimiter = chr(0x1E).encode('utf-8')
+    record_terminator = chr(0x1D).encode('utf-8')
+
+    # put these arrays together as the iso record.
     iso_record = directory
-    iso_record += field_text 
+    iso_record += field_text
     iso_record += field_delimiter
     iso_record += record_terminator
 
-    # Prepend the LDR
-    # TODO FIX THIS to accept biblio data per customer preference
+    # Finish the LDR
+    # First, this needs to be modified with string operations
     record_length = 24 + len(iso_record)
-    # len as zeropadded string
+
+    # the length must be zeropadded for a total length of 5 digits
     record_length = ('00000' + str(record_length))[-5:]
     LDR = record_length + LDR[5:]
 
     # start position of record data is written to LDR positions 12:16.
-    # it's computed by len(LDR) + len(directory)
+    # it's computed by len(LDR) (always 24) + len(directory)
     fields_startpos = 24 + len(directory)
-    # len as zeropadded string
+    # fields_startpos converted to string, zeropadded to length 5 digits
     fields_startpos = ('00000' + str(fields_startpos))[-5:]
-    # (print('FIELDS STARTPOS: ' + fields_startpos))
+
+    # insert fields_startpos where it belongs
     LDR = LDR[:12] + fields_startpos + LDR[17:]
 
-    # print('LDR:')
-    # print(LDR)
+    # convert the LDR to byte array, again using UTF-8
+    LDR = LDR.encode('UTF-8')
 
+    # prepend the LDR to the record
     iso_record = LDR + iso_record
+
+    # and now, we have the correct binary content, with the correct lengths
+    # and offsets computed... but we need to convert it BACK to UTF-8
+    # for travel. Not sure this is necessary, but this is the cautious approach
+    iso_record = iso_record.decode('utf-8')
 
     return iso_record
 

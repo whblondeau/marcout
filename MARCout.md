@@ -180,11 +180,11 @@ literal values and function calls.
     Depending on context, makes an empty string, or a non-value such as 
     Python `None` or JSON `null`.
 
-- `STARTS WITH`: operator for string values. Resolves to True if the
+- `STARTS WITH`: infix operator for string values. Resolves to True if the
     preceding string starts with the subsequent string.
 
-- `CONTAINS`: operator for string values. Resolves to True if the
-    preceding string starts with the subsequent string.
+- `CONTAINS`: infix operator for string values. Resolves to True if the
+    subsequent string is found within the preceding string.
 
 - `+`: the concatenation operator for string values. Does NOT represent
     numeric addition, date addition, etc.

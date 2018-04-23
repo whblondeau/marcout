@@ -32,11 +32,24 @@ def escape_json(json_text):
     return retval
 
 
+def escape_newlines(content):
+    retval = content.replace('\n', '&&&')
+    return retval
+
+
+def unescape_newlines(content):
+    retval = content.replace('\\n', '\n')
+    return retval
+
+
+
+
 # constants
 
 usage = '''USAGE: 
 
-    escape_unescape.py <sourcefilepath> --escape-json | --unescape-json [--verbose] [--help]
+    escape_unescape.py <sourcefilepath> --escape-json | --unescape-json 
+        | --escape-marcout | --unesape-marcout | --escape-newlines | --unescape-newlines [--verbose] [--help]
 
 '''
 
@@ -64,6 +77,18 @@ if '--escape-json' in call_options:
 
 elif '--unescape-json' in call_options:
     print(unescape_json(sourcecontent))
+
+elif '--escape-marcout' in call_options:
+    print(escape_marcout(sourcecontent))
+
+elif '--unescape-marcout' in call_options:
+    print(unescape_marcout(sourcecontent))
+
+elif '--escape-newlines' in call_options:
+    print(escape_newlines(sourcecontent))
+
+elif '--unescape-newlines' in call_options:
+    print(unescape_newlines(sourcecontent))
 
 else:
     print('unknown action.')
